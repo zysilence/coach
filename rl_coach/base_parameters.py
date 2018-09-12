@@ -278,7 +278,7 @@ class AgentParameters(Parameters):
 
 
 class TaskParameters(Parameters):
-    def __init__(self, framework_type: str, evaluate_only: bool=False, use_cpu: bool=False, experiment_path=None,
+    def __init__(self, framework_type: str='tensorflow', evaluate_only: bool=False, use_cpu: bool=False, experiment_path='/tmp',
                  seed=None):
         """
         :param framework_type: deep learning framework type. currently only tensorflow is supported
@@ -288,7 +288,7 @@ class TaskParameters(Parameters):
         :param seed: a seed to use for the random numbers generator
         """
         self.framework_type = framework_type
-        self.task_index = None  # TODO: not really needed
+        self.task_index = 0  # TODO: not really needed
         self.evaluate_only = evaluate_only
         self.use_cpu = use_cpu
         self.experiment_path = experiment_path
