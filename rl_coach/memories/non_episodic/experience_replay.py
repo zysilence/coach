@@ -15,6 +15,9 @@
 #
 
 from typing import List, Tuple, Union, Dict, Any
+import pickle
+import sys
+import time
 
 import numpy as np
 
@@ -201,3 +204,33 @@ class ExperienceReplay(Memory):
         self.reader_writer_lock.release_writing()
 
         return mean
+
+    def save(self, file_path: str) -> None:
+        """
+        Save the replay buffer contents to a pickle file
+        :param file_path: the path to the file that will be used to store the pickled transitions
+        """
+        with open(file_path, 'wb') as file:
+            pickle.dump(self.transitions, file)
+
+    def load(self, file_path: str) -> None:
+        """
+        Restore the replay buffer contents from a pickle file.
+        The pickle file is assumed to include a list of transitions.
+        :param file_path: The path to a pickle file to restore
+        """
+        with open(file_path, 'rb') as file:
+            transitions = pickle.load(file)
+            num_transitions = len(transitions)
+            start_time = time.time()
+            for transition_idx, transition in enumerate(transitions):
+                self.store(transition)
+
+                # print progress
+                if transition_idx % 100 == 0:
+                    percentage = int((100 * transition_idx) / num_transitions)
+                    sys.stdout.write("\rProgress: ({}/{})".format(transition_idx, num_transitions))
+                    sys.stdout.write(' Time (sec): {}'.format(round(time.time() - start_time, 2)))
+                    sys.stdout.write(' {}%|{}{}|  '.format(percentage, '#' * int(percentage / 10),
+                                     ' ' * (10 - int(percentage / 10))))
+                    sys.stdout.flush()
