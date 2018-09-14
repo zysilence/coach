@@ -284,11 +284,21 @@ class GraphManager(object):
         :param steps: number of training iterations to perform
         :return: None
         """
-        # perform several steps of training interleaved with acting
+        # currently
         count_end = self.total_steps_counters[RunPhase.TRAIN][TrainingSteps] + steps.num_steps
         while self.total_steps_counters[RunPhase.TRAIN][TrainingSteps] < count_end:
             self.total_steps_counters[RunPhase.TRAIN][TrainingSteps] += 1
             [manager.train() for manager in self.level_managers]
+
+        # # option 1
+        # for _ in StepsLoop(self.total_steps_counters, RunPhase.TRAIN, steps):
+        #     [manager.train() for manager in self.level_managers]
+        #
+        # # option 2
+        # steps_loop = StepsLoop(self.total_steps_counters, RunPhase.TRAIN, steps)
+        # while steps_loop or other:
+        #     [manager.train() for manager in self.level_managers]
+
 
     def reset_internal_state(self, force_environment_reset=False) -> None:
         """
@@ -348,6 +358,7 @@ class GraphManager(object):
             if result.game_over:
                 hold_until_a_full_episode = False
                 self.handle_episode_ended()
+                # TODO: why not just reset right now?
                 self.reset_required = True
                 if keep_networks_in_sync:
                     self.sync_graph()
@@ -369,16 +380,16 @@ class GraphManager(object):
         # perform several steps of training interleaved with acting
         if steps.num_steps > 0:
             self.phase = RunPhase.TRAIN
-            count_end = self.total_steps_counters[self.phase][steps.__class__] + steps.num_steps
             self.reset_internal_state(force_environment_reset=True)
             #TODO - the below while loop should end with full episodes, so to avoid situations where we have partial
             #  episodes in memory
+            count_end = self.total_steps_counters[self.phase][steps.__class__] + steps.num_steps
             while self.total_steps_counters[self.phase][steps.__class__] < count_end:
                 # The actual steps being done on the environment are decided by the agents themselves.
                 # This is just an high-level controller.
                 self.act(EnvironmentSteps(1))
                 self.train(TrainingSteps(1))
-                self.save_checkpoint()
+                self.occasionally_save_checkpoint()
             self.phase = RunPhase.UNDEFINED
 
     def sync_graph(self) -> None:
@@ -418,7 +429,7 @@ class GraphManager(object):
             checkpoint = tf.train.get_checkpoint_state(checkpoint_dir)
             screen.log_title("Loading checkpoint: {}".format(checkpoint.model_checkpoint_path))
             variables = {}
-            for var_name, _ in tf.contrib.framework.list_variables(self.task_parameters.checkpoint_restore_dir):
+            for var_name, _ in tf.contrib.framework.list_variables(checkpoint_dir):
                 # Load the variable
                 var = tf.contrib.framework.load_variable(checkpoint_dir, var_name)
 
@@ -430,35 +441,40 @@ class GraphManager(object):
             for v in self.variables_to_restore:
                 self.sess.run(v.assign(variables[v.name.split(':')[0]]))
 
-    def save_checkpoint(self):
+    def occasionally_save_checkpoint(self):
         # only the chief process saves checkpoints
         if self.task_parameters.save_checkpoint_secs \
                 and time.time() - self.last_checkpoint_saving_time >= self.task_parameters.save_checkpoint_secs \
                 and (self.task_parameters.task_index == 0  # distributed
                      or self.task_parameters.task_index is None  # single-worker
                      ):
+             self.save_checkpoint()
 
-            checkpoint_path = os.path.join(self.task_parameters.save_checkpoint_dir,
-                                           "{}_Step-{}.ckpt".format(
-                                               self.checkpoint_id,
-                                               self.total_steps_counters[RunPhase.TRAIN][EnvironmentSteps]))
-            if not isinstance(self.task_parameters, DistributedTaskParameters):
-                saved_checkpoint_path = self.checkpoint_saver.save(self.sess, checkpoint_path)
-            else:
-                saved_checkpoint_path = checkpoint_path
+    def _log_save_checkpoint(self):
+        checkpoint_path = os.path.join(self.task_parameters.save_checkpoint_dir,
+                                       "{}_Step-{}.ckpt".format(
+                                           self.checkpoint_id,
+                                           self.total_steps_counters[RunPhase.TRAIN][EnvironmentSteps]))
+        if not isinstance(self.task_parameters, DistributedTaskParameters):
+            saved_checkpoint_path = self.checkpoint_saver.save(self.sess, checkpoint_path)
+        else:
+            saved_checkpoint_path = checkpoint_path
 
-            # this is required in order for agents to save additional information like a DND for example
-            [manager.save_checkpoint(self.checkpoint_id) for manager in self.level_managers]
+        screen.log_dict(
+            OrderedDict([
+                ("Saving in path", saved_checkpoint_path),
+            ]),
+            prefix="Checkpoint"
+        )
 
-            screen.log_dict(
-                OrderedDict([
-                    ("Saving in path", saved_checkpoint_path),
-                ]),
-                prefix="Checkpoint"
-            )
+    def save_checkpoint(self):
+        # this is required in order for agents to save additional information like a DND for example
+        [manager.save_checkpoint(self.checkpoint_id) for manager in self.level_managers]
 
-            self.checkpoint_id += 1
-            self.last_checkpoint_saving_time = time.time()
+        self._log_save_checkpoint()
+
+        self.checkpoint_id += 1
+        self.last_checkpoint_saving_time = time.time()
 
     def improve(self):
         """
