@@ -1,14 +1,18 @@
 """
 """
 import argparse
+import time
 
 from rl_coach.base_parameters import TaskParameters
 from rl_coach.coach import expand_preset
 from rl_coach import core_types
 from rl_coach.utils import short_dynamic_import
+from rl_coach.memories.non_episodic.distributed_experience_replay import DistributedExperienceReplay
+from rl_coach.memories.memory import MemoryGranularity
 
 # Q: specify alternative distributed memory, or should this go in the preset?
 # A: preset must define distributed memory to be used. we aren't going to take a non-distributed preset and automatically distribute it.
+
 
 def training_worker(graph_manager, checkpoint_dir):
     """
@@ -22,6 +26,12 @@ def training_worker(graph_manager, checkpoint_dir):
     # save randomly initialized graph
     graph_manager.save_checkpoint()
 
+    memory = DistributedExperienceReplay(max_size=(MemoryGranularity.Transitions, 1000000),
+                                         redis_ip=graph_manager.agent_params.memory.redis_ip,
+                                         redis_port=graph_manager.agent_params.memory.redis_port)
+
+    while(memory.num_transitions() < 100):
+        time.sleep(10)
     # TODO: critical: wait for minimum number of rollouts in memory before training
     # TODO: Q: training steps passed into graph_manager.train ignored?
     # TODO: specify training steps between checkpoints (in preset?)
@@ -29,7 +39,7 @@ def training_worker(graph_manager, checkpoint_dir):
     # TODO: low: move evaluate out of this process
 
     # training loop
-    for _ in range(10):
+    for _ in range(40):
         graph_manager.phase = core_types.RunPhase.TRAIN
         graph_manager.train(core_types.TrainingSteps(1))
         graph_manager.phase = core_types.RunPhase.UNDEFINED
@@ -49,14 +59,27 @@ def main():
                         help='(string) Path to a folder containing a checkpoint to write the model to.',
                         type=str,
                         default='/checkpoint')
+    parser.add_argument('-r', '--redis_ip',
+                        help="(string) IP or host for the redis server",
+                        default='localhost',
+                        type=str)
+    parser.add_argument('-rp', '--redis_port',
+                        help="(int) Port of the redis server",
+                        default=6379,
+                        type=int)
+
     args = parser.parse_args()
 
     graph_manager = short_dynamic_import(expand_preset(args.preset), ignore_module_case=True)
+
+    graph_manager.agent_params.memory.redis_ip = args.redis_ip
+    graph_manager.agent_params.memory.redis_port = args.redis_port
 
     training_worker(
         graph_manager=graph_manager,
         checkpoint_dir=args.checkpoint_dir,
     )
+
 
 if __name__ == '__main__':
     main()
