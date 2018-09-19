@@ -37,6 +37,7 @@ def training_worker(graph_manager, checkpoint_dir):
     # TODO: specify training steps between checkpoints (in preset?)
     # TODO: replace while true with what? number of steps, convergence, time, ...
     # TODO: low: move evaluate out of this process
+    # heatup(graph_manager)
 
     # training loop
     for _ in range(40):
@@ -67,7 +68,6 @@ def main():
                         help="(int) Port of the redis server",
                         default=6379,
                         type=int)
-
     args = parser.parse_args()
 
     graph_manager = short_dynamic_import(expand_preset(args.preset), ignore_module_case=True)
