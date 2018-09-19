@@ -35,7 +35,7 @@ def training_worker(graph_manager, checkpoint_dir):
     # save randomly initialized graph
     graph_manager.save_checkpoint()
 
-    # optionally weight for a specific number of transitions to be in memory before training
+    # optionally wait for a specific number of transitions to be in memory before training
     heatup(graph_manager)
 
     # training loop
