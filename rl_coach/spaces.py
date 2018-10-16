@@ -199,6 +199,23 @@ class PlanarMapsObservationSpace(ObservationSpace):
             self.channels = shape[channels_axis]
 
 
+class CandleStickObservationSpace(ObservationSpace):
+    """
+    [sfan] Candle stick chart observation.
+    """
+    def __init__(self, shape: Union[np.ndarray], low: float, high: float, channels_axis: int=-1):
+        super().__init__(shape, low, high)
+        self.channels_axis = channels_axis
+
+        if not 2 <= len(shape) <= 3:
+            raise ValueError("Candle stick observations must have 3 dimensions - a channels dimension and 2 maps "
+                             "dimensions, not {}".format(len(shape)))
+        if len(shape) == 2:
+            self.channels = 1
+        else:
+            self.channels = shape[channels_axis]
+
+
 class ImageObservationSpace(PlanarMapsObservationSpace):
     def __init__(self, shape: Union[np.ndarray], high: int, channels_axis: int=-1):
         # TODO: consider allowing arbitrary low values for images

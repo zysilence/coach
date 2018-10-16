@@ -26,7 +26,7 @@ from rl_coach.architectures.tensorflow_components.heads.head import HeadParamete
 from rl_coach.architectures.tensorflow_components.middlewares.middleware import MiddlewareParameters
 from rl_coach.base_parameters import AgentParameters, EmbeddingMergerType
 from rl_coach.core_types import PredictionType
-from rl_coach.spaces import SpacesDefinition, PlanarMapsObservationSpace
+from rl_coach.spaces import SpacesDefinition, PlanarMapsObservationSpace, CandleStickObservationSpace
 from rl_coach.utils import get_all_subclasses, dynamic_import_and_instantiate_module_from_params, indent_string
 
 
@@ -139,6 +139,8 @@ class GeneralTensorFlowNetwork(TensorFlowArchitecture):
         type = "vector"
         if isinstance(allowed_inputs[input_name], PlanarMapsObservationSpace):
             type = "image"
+        elif isinstance(allowed_inputs[input_name], CandleStickObservationSpace):
+            type = "candle_stick"
 
         embedder_path = 'rl_coach.architectures.tensorflow_components.embedders.' + embedder_params.path[type]
         embedder_params_copy = copy.copy(embedder_params)

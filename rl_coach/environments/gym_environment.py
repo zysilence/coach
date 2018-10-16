@@ -44,7 +44,7 @@ from typing import Dict, Any, Union
 from rl_coach.core_types import RunPhase, EnvironmentSteps
 from rl_coach.environments.environment import Environment, EnvironmentParameters, LevelSelection
 from rl_coach.spaces import DiscreteActionSpace, BoxActionSpace, ImageObservationSpace, VectorObservationSpace, \
-    StateSpace, RewardSpace
+    CandleStickObservationSpace, StateSpace, RewardSpace
 from rl_coach.filters.filter import NoInputFilter, NoOutputFilter
 from rl_coach.filters.reward.reward_clipping_filter import RewardClippingFilter
 from rl_coach.filters.observation.observation_rescale_to_size_filter import ObservationRescaleToSizeFilter
@@ -272,6 +272,13 @@ class GymEnvironment(Environment):
                 self.state_space[observation_space_name] = ImageObservationSpace(
                     shape=np.array(observation_space.shape),
                     high=255,
+                    channels_axis=-1
+                )
+            elif len(observation_space.shape) == 3:
+                self.state_space[observation_space_name] = CandleStickObservationSpace(
+                    shape=np.array(observation_space.shape),
+                    low=observation_space.low,
+                    high=observation_space.high,
                     channels_axis=-1
                 )
             else:

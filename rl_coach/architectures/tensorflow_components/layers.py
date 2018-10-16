@@ -34,7 +34,7 @@ def batchnorm_activation_dropout(input_layer, batchnorm, activation_function, dr
 
 
 class Conv2d(object):
-    def __init__(self, num_filters: int, kernel_size: int, strides: int):
+    def __init__(self, num_filters: int, kernel_size: Union[int, List[int]], strides: Union[int, List[int]]):
         self.num_filters = num_filters
         self.kernel_size = kernel_size
         self.strides = strides

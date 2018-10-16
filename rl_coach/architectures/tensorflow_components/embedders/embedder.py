@@ -39,9 +39,9 @@ class InputEmbedderParameters(NetworkComponentParameters):
         self.dropout = dropout
 
         if input_rescaling is None:
-            input_rescaling = {'image': 255.0, 'vector': 1.0}
+            input_rescaling = {'image': 255.0, 'vector': 1.0, 'candle_stick': 1.0}
         if input_offset is None:
-            input_offset = {'image': 0.0, 'vector': 0.0}
+            input_offset = {'image': 0.0, 'vector': 0.0, 'candle_stick': 0.0}
 
         self.input_rescaling = input_rescaling
         self.input_offset = input_offset
@@ -53,7 +53,8 @@ class InputEmbedderParameters(NetworkComponentParameters):
     def path(self):
         return {
             "image": 'image_embedder:ImageEmbedder',
-            "vector": 'vector_embedder:VectorEmbedder'
+            "vector": 'vector_embedder:VectorEmbedder',
+            "candle_stick": 'candle_stick_embedder:CandleStickEmbedder'
         }
 
 
