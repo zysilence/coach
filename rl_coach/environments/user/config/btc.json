@@ -1,0 +1,37 @@
+{
+  "DB_RUNS": "postgres://btc:btc@localhost/hyper_runs",
+  "DB_HISTORY": "postgres://btc:btc@localhost/btc_history",
+  "DB_HISTORY_LIVE": "postgres://btc:btc@localhost/history_live",
+  "GDAX": {
+    "passphrase": "",
+    "key": "",
+    "b64secret": ""
+  },
+  "DATA": {
+    "period": "1H",
+    "train_start_date": "2017-11",
+    "train_end_date": "2018-01",
+    "test_start_date": "2018-04",
+    "test_end_date": "2018-05",
+    "features": ["open", "close", "high", "low"]
+  },
+  "STATE": {
+    "step_window": 30
+  },
+  "ACTION": {
+    "pct_map": {
+      "0": 0,
+      "1": 1
+    }
+  },
+  "EPISODE": {
+    "max_len": 24,
+    "stop_loss_fraction": 0,
+    "force_stop_loss": true,
+    "trade_once": true
+  },
+  "REWARD": {
+    "extra_reward": 0,
+    "fee_rate": 0
+  }
+}
