@@ -207,7 +207,11 @@ class BitcoinEnv(gym.Env):
 
         # [sfan] Episode terminating condition 4:
         if next_state is None:
-            print("%%%%%%%%%%%%%%%%%%")
+            self.terminal = True
+
+        # [sfan] Avoid None value of the next state of next state, which causes crash of coach
+        _, next_next_state = self.data.get_data(acc.ep.i, acc.step.i + 1)  # TODO verify
+        if next_next_state is None:
             self.terminal = True
 
         # [sfan] Episode terminating condition 2:
