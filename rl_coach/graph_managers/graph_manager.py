@@ -394,6 +394,11 @@ class GraphManager(object):
             if result is None:
                 break
 
+            # [sfan] if env returns no result, the evaluation is terminated
+            if result.next_state.get('observation') is None:
+                self.total_steps_counters[self.phase][steps.__class__] = count_end
+                hold_until_a_full_episode = False
+
             # add the diff between the total steps before and after stepping, such that environment initialization steps
             # (like in Atari) will not be counted.
             # We add at least one step so that even if no steps were made (in case no actions are taken in the training

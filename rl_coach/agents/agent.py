@@ -713,6 +713,10 @@ class Agent(AgentInterface):
         # filter the env_response
         filtered_env_response = self.input_filter.filter(env_response)[0]
 
+        # [sfan] Deal with None state
+        if filtered_env_response.next_state.get('observation') is None:
+            return True
+
         # inject agent collected statistics, if required
         if self.ap.algorithm.use_accumulated_reward_as_measurement:
             if 'measurements' in filtered_env_response.next_state:
