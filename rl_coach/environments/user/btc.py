@@ -41,7 +41,7 @@ class BitcoinEnv(gym.Env):
         self.start_cash, self.start_value = 1.0, .0  # .4, .4
 
         # [sfan] default: 'train'; can be set by 'set_mode' method
-        self.mode = 'train'
+        self.mode = self.hypers.EPISODE.mode
 
         # We have these "accumulator" objects, which collect values over steps, over episodes, etc. Easier to keep
         # same-named variables separate this way.

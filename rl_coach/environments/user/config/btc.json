@@ -28,7 +28,8 @@
     "max_len": 200,
     "stop_loss_fraction": 0,
     "force_stop_loss": true,
-    "trade_once": false
+    "trade_once": false,
+    "mode": "test"
   },
   "REWARD": {
     "extra_reward": 0,
