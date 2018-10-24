@@ -95,7 +95,10 @@ class BitcoinEnv(gym.Env):
 
         # for render
         self.raw_states_ = None
+        self.raw_next_states_ = None
         self.ohlc_history = None
+        self.action_history = None
+        self.fig = None
 
     @property
     def states(self): return self.states_
@@ -144,6 +147,7 @@ class BitcoinEnv(gym.Env):
         # self.data.reset_cash_val()
         # self.data.set_cash_val(acc.ep.i, acc.step.i, 0., 0.)
         self.states_, self.raw_states_ = self.get_next_state()
+        self.raw_next_states_ = self.raw_states_
 
         return self.states_
 
@@ -210,9 +214,10 @@ class BitcoinEnv(gym.Env):
             acc.step.value/self.start_value
         )
         """
+        self.raw_states_ = self.raw_next_states_
         next_state, raw_state = self.get_next_state()
         self.states_ = next_state
-        self.raw_states_ = raw_state
+        self.raw_next_states_ = raw_state
 
         # [sfan] Episode terminating condition 4:
         if next_state is None:
@@ -365,7 +370,8 @@ class BitcoinEnv(gym.Env):
         from matplotlib.finance import candlestick_ohlc
         import matplotlib.dates as mdates
 
-        plt.ion()
+        if self.raw_next_states_ is None:
+            return None
 
         df_history = self.raw_states_.copy()
         columns = ['coinbase_timestamp', 'coinbase_open', 'coinbase_high', 'coinbase_low', 'coinbase_close']
@@ -375,16 +381,48 @@ class BitcoinEnv(gym.Env):
         ohlc = df_history['ii'].map(lambda x: tuple(df_history.iloc[x][columns])).tolist()
         weekday_ohlc = [tuple([i]+list(item[1:])) for i, item in enumerate(ohlc)]
 
-        fig = plt.figure(figsize=(len(weekday_ohlc)*10.0/46, 7))
-        ax = plt.subplot(1, 1, 1)
+        if not self.ohlc_history:
+            self.ohlc_history = weekday_ohlc
+            self.action_history = [0] * len(weekday_ohlc)
+        else:
+            self.ohlc_history.pop(0)
+            self.ohlc_history.append(weekday_ohlc[-1])
+            signals = self.acc[self.mode].step.signals
+            if signals:
+                self.action_history.pop(0)
+                self.action_history.append(signals[-1])
+
+        action_ohlc = []
+        for i, item in enumerate(self.action_history):
+            if item:
+                tuple_item = (i, 0, 1, 0, 1)
+            else:
+                tuple_item = (i, 0, 0, 0, 0)
+            action_ohlc.append(tuple_item)
+        # action_ohlc = [tuple([i] + []) for i, item in enumerate(self.action_history)]
+
+        plt.ion()
+        if self.fig is None:
+            self.fig = plt.figure(figsize=(len(weekday_ohlc)*10.0/46, 7))
+        plt.clf()
+        # plt.cla()
+        ax = plt.subplot(2, 1, 1)
         candlestick_ohlc(ax, weekday_ohlc, width=0.6, colorup='r', colordown='g')
         ax.set_xticks(range(0, len(weekday_ohlc), 1))  # 每小时标一个日期
         ax.set_xticklabels([mdates.num2date(ohlc[index][0]).strftime('%Y-%m-%d') for index in ax.get_xticks()])
-        ax.legend(['time'], frameon=False)
+        # ax.legend(['price'], frameon=False)
         plt.xlim(0, len(weekday_ohlc) - 1)  # 设置一下x轴的范围
         plt.setp(plt.gca().get_xticklabels(), rotation=45, horizontalalignment='right')  # 将x轴的label转一下，好看一点
-        plt.pause(3)
-        plt.close()
+
+        ax = plt.subplot(2, 1, 2)
+        candlestick_ohlc(ax, action_ohlc, width=0.6, colorup='r', colordown='g')
+        ax.set_xticks(range(0, len(action_ohlc), 1))  # 每小时标一个日期
+        # ax.set_xticklabels([mdates.num2date(ohlc[index][0]).strftime('%Y-%m-%d') for index in ax.get_xticks()])
+        # ax.legend(['aciton'], frameon=False)
+        plt.xlim(0, len(action_ohlc) - 1)  # 设置一下x轴的范围
+        plt.setp(plt.gca().get_xticklabels(), rotation=45, horizontalalignment='right')  # 将x轴的label转一下，好看一点
+
+        plt.pause(0.0001)
 
         return None
 
