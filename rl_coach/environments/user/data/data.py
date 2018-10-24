@@ -66,13 +66,18 @@ class Data(object):
             df_ = df_.rename(columns=col_renames_)
             ts = "{}_timestamp".format(table)
             df_[ts] = pd.to_datetime(df_[ts], unit='s')
+            self.raw_data = df_
+            # self.raw_data = self.raw_data.rename(columns={ts: 'date'})
             df_ = df_.set_index(ts)
+            self.raw_data = self.raw_data.set_index(ts, drop=False)
             df = df_ if df is None else df.join(df_)
 
             # [sfan] Select features
             features = config_json['DATA']['features']
             columns = ["{}_{}".format(table, feature) for feature in features]
             df = df[columns]
+            columns.append('{}_{}'.format(table, 'timestamp'))
+            self.raw_data = self.raw_data[columns]
 
         # too quiet before 2015, time waste. copy() to avoid pandas errors
         # [sfan] start year is read from the config file
@@ -84,9 +89,11 @@ class Data(object):
             start_date = config_json['DATA']['test_start_date']
             end_date = config_json['DATA']['test_end_date']
         df = df.loc[start_date:end_date].copy()
+        self.raw_data = self.raw_data.loc[start_date:end_date].copy()
 
         # [sfan] fill nan
         df = df.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
+        self.raw_data = self.raw_data.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
         # [sfan] Use scale or not?
         """
         df = pd.DataFrame(
@@ -140,6 +147,7 @@ class Data(object):
         try:
             X = self.df.iloc[offset:offset+self.window]
             y = self.df.iloc[offset+self.window]
+            raw = self.raw_data[offset:offset+self.window]
             # [sfan] normalized by close price of the last timestep in the window
             base = X.iloc[-1]['coinbase_close']
             X = X / base
@@ -147,6 +155,7 @@ class Data(object):
         except IndexError:
             X = None
             y = None
+            raw = None
 
-        return X, y
+        return X, y, raw
 

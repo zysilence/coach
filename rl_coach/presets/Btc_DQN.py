@@ -33,6 +33,12 @@ env_params.default_input_filter = NoInputFilter()
 env_params.default_output_filter = NoOutputFilter()
 # env_params.additional_simulator_parameters = {"time_limit": 1000}
 
+###############
+# Visualization #
+###############
+visual_params = VisualizationParameters()
+visual_params.native_rendering = True
+
 ########
 # Test #
 ########
@@ -42,5 +48,5 @@ preset_validation_params.min_reward_threshold = -1
 preset_validation_params.max_episodes_to_achieve_reward = 1
 
 graph_manager = BasicRLGraphManager(agent_params=agent_params, env_params=env_params,
-                                    schedule_params=schedule_params, vis_params=VisualizationParameters(),
+                                    schedule_params=schedule_params, vis_params=visual_params,
                                     preset_validation_params=preset_validation_params)

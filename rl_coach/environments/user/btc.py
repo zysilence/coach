@@ -21,6 +21,7 @@ from gym import spaces
 from rl_coach.environments.user.data.data import Data, Exchange, EXCHANGE
 from gym.utils import seeding
 import numpy as np
+import pandas as pd
 
 
 # See 6fc4ed2 for Scaling states/rewards
@@ -78,6 +79,7 @@ class BitcoinEnv(gym.Env):
         self.cols_ = self.data.df.shape[1]
         shape = (self.hypers.STATE.step_window, 1, self.cols_)
         self.states_ = dict(type='float', shape=shape)
+        self.raw_states_ = None
 
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(low=-2, high=2, shape=(self.hypers.STATE.step_window, 1, self.cols_))
@@ -138,7 +140,9 @@ class BitcoinEnv(gym.Env):
 
         # self.data.reset_cash_val()
         # self.data.set_cash_val(acc.ep.i, acc.step.i, 0., 0.)
-        return self.get_next_state()
+        self.states_, self.raw_states_ = self.get_next_state()
+
+        return self.states_
 
     def step(self, action):
         """
@@ -181,7 +185,7 @@ class BitcoinEnv(gym.Env):
 
         # next delta. [1,2,2].pct_change() == [NaN, 1, 0]
         # pct_change = self.prices_diff[acc.step.i + 1]
-        _, y = self.data.get_data(acc.ep.i, acc.step.i)  # TODO verify
+        _, y, _ = self.data.get_data(acc.ep.i, acc.step.i)  # TODO verify
         pct_change = y[self.data.target]
 
         # [sfan]
@@ -203,14 +207,16 @@ class BitcoinEnv(gym.Env):
             acc.step.value/self.start_value
         )
         """
-        next_state = self.get_next_state()
+        next_state, raw_state = self.get_next_state()
+        self.states_ = next_state
+        self.raw_states_ = raw_state
 
         # [sfan] Episode terminating condition 4:
         if next_state is None:
             self.terminal = True
 
         # [sfan] Avoid None value of the next state of next state, which causes crash of coach
-        _, next_next_state = self.data.get_data(acc.ep.i, acc.step.i + 1)  # TODO verify
+        _, next_next_state, _ = self.data.get_data(acc.ep.i, acc.step.i + 1)  # TODO verify
         if next_next_state is None:
             self.terminal = True
 
@@ -244,9 +250,6 @@ class BitcoinEnv(gym.Env):
         # if acc.step.value <= 0 or acc.step.cash <= 0: terminal = 1
         return next_state, reward, self.terminal, {}
 
-    def render(self, mode='human'):
-        return None
-
     def close(self):
         pass
 
@@ -263,11 +266,11 @@ class BitcoinEnv(gym.Env):
 
     def get_next_state(self):
         acc = self.acc[self.mode]
-        X, _ = self.data.get_data(acc.ep.i, acc.step.i)
+        X, _, raw = self.data.get_data(acc.ep.i, acc.step.i)
         if X is not None:
-            return X.values[:, np.newaxis, :]  # height, width(nothing), depth
+            return X.values[:, np.newaxis, :], raw  # height, width(nothing), depth
         else:
-            return None
+            return None, None
 
     def get_return(self):
         acc = self.acc[self.mode]
@@ -353,5 +356,33 @@ class BitcoinEnv(gym.Env):
         }
 
         return stats
+
+    def render(self, mode='human'):
+        import matplotlib.pyplot as plt
+        from matplotlib.finance import candlestick_ohlc
+        import matplotlib.dates as mdates
+
+        plt.ion()
+
+        df_history = self.raw_states_.copy()
+        columns = ['coinbase_timestamp', 'coinbase_open', 'cointbase_high', 'coinbase_low', 'coinbase_close']
+
+        df_history['coinbase_timestamp'] = df_history['coinbase_timestamp'].map(lambda x: mdates.date2num(x))
+        df_history['ii'] = range(len(df_history))
+        ohlc = df_history['ii'].map(lambda x: tuple(df_history.iloc[x][columns])).tolist()
+        weekday_ohlc = [tuple([i]+list(item[1:])) for i, item in enumerate(ohlc)]
+
+        fig = plt.figure(figsize=(len(weekday_ohlc)*10.0/46, 7))
+        ax = plt.subplot(1, 1, 1)
+        candlestick_ohlc(ax, weekday_ohlc, width=0.6, colorup='r', colordown='g')
+        ax.set_xticks(range(0, len(weekday_ohlc), 1))  # 每小时标一个日期
+        ax.set_xticklabels([mdates.num2date(ohlc[index][0]).strftime('%Y-%m-%d') for index in ax.get_xticks()])
+        ax.legend(['time'], frameon=False)
+        plt.xlim(0, len(weekday_ohlc) - 1)  # 设置一下x轴的范围
+        plt.setp(plt.gca().get_xticklabels(), rotation=45, horizontalalignment='right')  # 将x轴的label转一下，好看一点
+        plt.pause(3)
+        plt.close()
+
+        return None
 
 
