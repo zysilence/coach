@@ -79,7 +79,6 @@ class BitcoinEnv(gym.Env):
         self.cols_ = self.data.df.shape[1]
         shape = (self.hypers.STATE.step_window, 1, self.cols_)
         self.states_ = dict(type='float', shape=shape)
-        self.raw_states_ = None
 
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(low=-2, high=2, shape=(self.hypers.STATE.step_window, 1, self.cols_))
@@ -93,6 +92,10 @@ class BitcoinEnv(gym.Env):
         self.is_stop_loss = False
         self.terminal = False
         self.fee = 0
+
+        # for render
+        self.raw_states_ = None
+        self.ohlc_history = None
 
     @property
     def states(self): return self.states_
@@ -365,7 +368,7 @@ class BitcoinEnv(gym.Env):
         plt.ion()
 
         df_history = self.raw_states_.copy()
-        columns = ['coinbase_timestamp', 'coinbase_open', 'cointbase_high', 'coinbase_low', 'coinbase_close']
+        columns = ['coinbase_timestamp', 'coinbase_open', 'coinbase_high', 'coinbase_low', 'coinbase_close']
 
         df_history['coinbase_timestamp'] = df_history['coinbase_timestamp'].map(lambda x: mdates.date2num(x))
         df_history['ii'] = range(len(df_history))
