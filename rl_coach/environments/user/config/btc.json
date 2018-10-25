@@ -29,10 +29,10 @@
     "stop_loss_fraction": 0,
     "force_stop_loss": true,
     "trade_once": false,
-    "mode": "test"
+    "mode": "train"
   },
   "REWARD": {
     "extra_reward": 0,
-    "fee_rate": 0
+    "fee_rate": 0.0026
   }
 }

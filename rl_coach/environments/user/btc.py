@@ -166,7 +166,7 @@ class BitcoinEnv(gym.Env):
         act_pct = self.hypers.ACTION.pct_map[str(action)]
         fee_rate = self.hypers.REWARD.fee_rate
         # act_btc = act_pct * (acc.step.cash if act_pct > 0 else acc.step.value)
-        act_btc = act_pct * self.start_cash
+        act_btc = act_pct * acc.step.cash
 
         """
         fee = {
@@ -178,12 +178,14 @@ class BitcoinEnv(gym.Env):
         # Perform the trade. In training mode, we'll let it dip into negative here, but then kill and punish below.
         # In testing/live, we'll just block the trade if they can't afford it
         if act_pct > 0 and acc.step.value == 0 and acc.step.cash >= self.stop_loss:
-            # acc.step.value += act_btc - act_btc * fee_rate
-            acc.step.value += act_btc
+            self.fee = act_btc * fee_rate
+            acc.step.value += act_btc - self.fee
+            # acc.step.value += act_btc
             acc.step.cash -= act_btc
         if act_pct == 0 and acc.step.value > 0:
-            self.fee = acc.step.value * fee_rate
-            acc.step.cash += acc.step.value - self.fee
+            # self.fee = acc.step.value * fee_rate
+            # acc.step.cash += acc.step.value - self.fee
+            acc.step.cash += acc.step.value
             acc.step.value = 0
             # [sfan] Episode terminating condition 1:
             #   Trade once per episode. When shorting the trade, the episode is terminated.
@@ -293,7 +295,7 @@ class BitcoinEnv(gym.Env):
         if self.hypers.EPISODE.trade_once:
             reward += self.hypers.REWARD.extra_reward
 
-        reward -= self.fee
+        # reward -= self.fee
 
         """
         if self.hypers.EPISODE.force_stop_loss and self.is_stop_loss:
