@@ -26,3 +26,4 @@ datasets
 core
 trace_test*
 tutorials/.ipynb_checkpoints/
+rl_coach/environments/user/data/populate/bitcoin-historical-data/*
