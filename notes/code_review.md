@@ -53,4 +53,27 @@
                 embedder_path = 'rl_coach.architectures.tensorflow_components.embedders.' + embedder_params.path[type]
                 ```
         * 若个性化定制不同的网络结构, 可以在以上两个地方修改
+* Dropout & Batchnorm
+    * 通过preset配置网络结构
+        * 参考rl_coach/presets/CARLA_CIL.py
+    * 通过preset参数直接配置
+        * agent_params.network_wrappers['main'].input_embedders_parameters['observation'].dropout = True
+            * 按照设计，通过该参数也可以，但是程序中写死了dropout_rate=0, dropdout不起作用
+        * agent_params.network_wrappers['main'].input_embedders_parameters['observation'].batchnorm = True
+* Reward clips
+    *  btc训练中看到了很高的reward，尝试下reward clips。在preset中的配置如下：
+    ```python
+  from rl_coach.filters.filter import InputFilter
+  from rl_coach.filters.reward.reward_clipping_filter import RewardClippingFilter
+  from rl_coach.environments.gym_environment import GymEnvironmentParameters
+      
+  input_filter = InputFilter(is_a_reference_filter=True)
+  input_filter.add_reward_filter('clipping', RewardClippingFilter(-1.0, 1.0))
+  env_params = GymEnvironmentParameters()
+  env_params.default_input_filter = input_filter
+    ```
+* 使用两个月数据做训练存在过拟合现象
+    * 增加dropout层
+    * 增加L2 norm
+    * 使用两年数据，使用大网络
     

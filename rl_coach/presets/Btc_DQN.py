@@ -2,9 +2,11 @@ from rl_coach.agents.dqn_agent import DQNAgentParameters
 from rl_coach.base_parameters import VisualizationParameters, PresetValidationParameters
 from rl_coach.core_types import TrainingSteps, EnvironmentEpisodes, EnvironmentSteps
 from rl_coach.environments.gym_environment import GymEnvironmentParameters
-from rl_coach.filters.filter import NoInputFilter, NoOutputFilter
+from rl_coach.filters.filter import NoInputFilter, NoOutputFilter, InputFilter
+from rl_coach.filters.reward.reward_clipping_filter import RewardClippingFilter
 from rl_coach.graph_managers.basic_rl_graph_manager import BasicRLGraphManager
 from rl_coach.graph_managers.graph_manager import ScheduleParameters
+from rl_coach.schedules import LinearSchedule
 
 
 ####################
@@ -23,13 +25,17 @@ schedule_params.heatup_steps = EnvironmentSteps(1000)
 agent_params = DQNAgentParameters()
 # since we are using Adam instead of RMSProp, we adjust the learning rate as well
 agent_params.network_wrappers['main'].learning_rate = 0.0001
+agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 10000000)  # decault value: 1000000
+# agent_params.network_wrappers['main'].input_embedders_parameters['observation'].dropout = True
 
 ###############
 # Environment #
 ###############
 env_params = GymEnvironmentParameters()
+input_filter = InputFilter(is_a_reference_filter=True)
+input_filter.add_reward_filter('clipping', RewardClippingFilter(-1.0, 1.0))
 env_params.level = "rl_coach.environments.user.btc:BitcoinEnv"
-env_params.default_input_filter = NoInputFilter()
+env_params.default_input_filter = input_filter
 env_params.default_output_filter = NoOutputFilter()
 # env_params.additional_simulator_parameters = {"time_limit": 1000}
 
