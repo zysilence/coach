@@ -8,10 +8,10 @@
     "b64secret": ""
   },
   "DATA": {
-    "period": "1H",
-    "train_start_date": "2017-11",
-    "train_end_date": "2018-01",
-    "test_start_date": "2018-04",
+    "period": "1D",
+    "train_start_date": "2016-01",
+    "train_end_date": "2018-03",
+    "test_start_date": "2018-03",
     "test_end_date": "2018-05",
     "features": ["open", "close", "high", "low"]
   },
@@ -25,7 +25,7 @@
     }
   },
   "EPISODE": {
-    "max_len": 200,
+    "max_len": 20,
     "stop_loss_fraction": 0,
     "force_stop_loss": true,
     "trade_once": false,

@@ -50,7 +50,8 @@ class Data(object):
         filenames = {
             # 'bitstamp': 'bitstampUSD_1-min_data_2012-01-01_to_2018-06-27.csv',
             # 'coinbase': 'coinbaseUSD_1-min_data_2014-12-01_to_2018-06-27.csv',
-            'coinbase': 'coinbaseUSD_1H_data_2014-12-01_to_2018-06-27.csv',
+            'coinbase': 'coinbaseUSD_1D_data_2014-12-01_to_2018-06-27.csv',
+            # 'coinbase': 'coinbaseUSD_1H_data_2014-12-01_to_2018-06-27.csv',
             # 'coincheck': 'coincheckJPY_1-min_data_2014-10-31_to_2018-06-27.csv'
         }
         primary_table = 'coinbase'
