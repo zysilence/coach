@@ -25,7 +25,8 @@ schedule_params.heatup_steps = EnvironmentSteps(1000)
 agent_params = DQNAgentParameters()
 # since we are using Adam instead of RMSProp, we adjust the learning rate as well
 agent_params.network_wrappers['main'].learning_rate = 0.0001
-agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 10000000)  # decault value: 1000000
+# agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 10000000)  # decault value: 1000000
+agent_params.exploration.evaluation_epsilon = 0.0
 # agent_params.network_wrappers['main'].input_embedders_parameters['observation'].dropout = True
 
 ###############
