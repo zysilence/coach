@@ -1,9 +1,13 @@
 # Config
 ## Environment config
-* E.g., "config.json"
-* DATA.test_start_date
-    * 开始的window_size个step是没有结果的，因为这些steps对应的数据的历史数据不全，所以实际测试的是DATA.test_end_date - DATA.test_start_date - window_size个step的值，
-    若step是以天为单位，则可以设置DATA.test_start_date提前一个月
+* Config file: "coach/rl_coach/environments/user/config/config.json"
+* DATA
+    * test_start_date
+        * 开始的window_size个steps是没有结果的，因为这些steps对应的数据的历史数据不全，所以实际测试的是
+        DATA.test_end_date - DATA.test_start_date - STATE.step_window个step的值，可以设置DATA.test_start_date提前step_window个时间单位
+# STATE
+* step_window
+    * 设置值越大，看到的历史信息越多，更能对趋势建模, 比如step_window=90要好于step_window=30
     
 # Netowrk
 ## Input Embedders
@@ -32,7 +36,7 @@
       for observation_space_name, observation_space in state_space.items():
           if len(observation_space.shape) == 3 and observation_space.shape[-1] == 3:
               # we assume gym has image observations which are RGB and where their values are within 0-255
-              self.state_space[observation_space_name] = ImageObservationSpace(
+              se旦训练好以后，模型会比较难ovelf.state_space[observation_space_name] = ImageObservationSpace(
                   shape=np.array(observation_space.shape),
                   high=255,
                    channels_axis=-1
@@ -60,6 +64,9 @@
                 embedder_path = 'rl_coach.architectures.tensorflow_components.embedders.' + embedder_params.path[type]
                 ```
         * 若个性化定制不同的网络结构, 可以在以上两个地方修改
+* 可否使用autoencoder自动提取特征？
+    * 参考[AlphaAI项目](https://github.com/VivekPa/AlphaAI)
+    
 ## Dropout & Batchnorm
 * 通过preset配置网络结构
     * 参考rl_coach/presets/CARLA_CIL.py
