@@ -8,6 +8,8 @@
 # STATE
 * step_window
     * 设置值越大，看到的历史信息越多，更能对趋势建模, 比如step_window=90要好于step_window=30
+* 特征
+    * 是否需要对各个维度的特征做Normalization，参考Facebook开源的RL框架Horizon
     
 # Netowrk
 ## Input Embedders
