@@ -21,7 +21,7 @@ import tensorflow as tf
 from rl_coach.architectures.tensorflow_components.layers import Conv2d, Dense
 from rl_coach.architectures.tensorflow_components.embedders.embedder import InputEmbedder
 from rl_coach.base_parameters import EmbedderScheme
-from rl_coach.core_types import InputImageEmbedding
+from rl_coach.core_types import InputTensorEmbedding
 
 
 class CandleStickEmbedder(InputEmbedder):
@@ -40,7 +40,7 @@ class CandleStickEmbedder(InputEmbedder):
                  dense_layer=Dense, is_training=False):
         super().__init__(input_size, activation_function, scheme, batchnorm, dropout, name, input_rescaling,
                          input_offset, input_clipping, dense_layer=dense_layer, is_training=is_training)
-        self.return_type = InputImageEmbedding
+        self.return_type = InputTensorEmbedding
         if len(input_size) != 3 and scheme != EmbedderScheme.Empty:
             raise ValueError("Image embedders expect the input size to have 3 dimensions. The given size is: {}"
                              .format(input_size))

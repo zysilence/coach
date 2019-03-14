@@ -25,6 +25,7 @@ from rl_coach.agents.agent_interface import AgentInterface
 from rl_coach.base_parameters import AgentParameters, VisualizationParameters
 from rl_coach.core_types import ActionInfo, EnvResponse, ActionType, RunPhase
 from rl_coach.filters.observation.observation_crop_filter import ObservationCropFilter
+from rl_coach.saver import SaverCollection
 from rl_coach.spaces import ActionSpace
 from rl_coach.spaces import AgentSelection, AttentionActionSpace, SpacesDefinition
 from rl_coach.utils import short_dynamic_import
@@ -304,9 +305,12 @@ class CompositeAgent(AgentInterface):
         for agent in self.agents.values():
             agent.phase = val
 
-    def end_episode(self) -> None:
+    def handle_episode_ended(self) -> None:
         """
-        End an episode
+        Make any changes needed when each episode is ended.
+        This includes incrementing counters, updating full episode dependent values, updating logs, etc.
+        This function is called right after each episode is ended.
+
         :return: None
         """
         self.current_episode += 1
@@ -388,8 +392,11 @@ class CompositeAgent(AgentInterface):
         # probably better to only return the agents' goal_reached decisions.
         return episode_ended
 
-    def save_checkpoint(self, checkpoint_id: int) -> None:
-        [agent.save_checkpoint(checkpoint_id) for agent in self.agents.values()]
+    def save_checkpoint(self, checkpoint_prefix: str) -> None:
+        [agent.save_checkpoint(checkpoint_prefix) for agent in self.agents.values()]
+
+    def restore_checkpoint(self, checkpoint_dir: str) -> None:
+        [agent.restore_checkpoint(checkpoint_dir) for agent in self.agents.values()]
 
     def set_incoming_directive(self, action: ActionType) -> None:
         self.incoming_action = action
@@ -412,3 +419,16 @@ class CompositeAgent(AgentInterface):
         :return:
         """
         [agent.sync() for agent in self.agents.values()]
+
+    def collect_savers(self, parent_path_suffix: str) -> SaverCollection:
+        """
+        Collect all of agent's network savers
+        :param parent_path_suffix: path suffix of the parent of the agent
+            (could be name of level manager or composite agent)
+        :return: collection of all agent savers
+        """
+        savers = SaverCollection()
+        for agent in self.agents.values():
+            savers.update(agent.collect_savers(
+                parent_path_suffix="{}.{}".format(parent_path_suffix, self.name)))
+        return savers

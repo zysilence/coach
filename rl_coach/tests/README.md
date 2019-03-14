@@ -9,11 +9,12 @@ several parts, each testing the framework in different areas and strictness.
 * **Docker** -
     
     The docker image we supply checks Coach in terms of installation process, and verifies that all the components
-    are installed correctly. To build the Docke, use the command:
+    are installed correctly. To build the Docker image, use the command:
     
     ```
-    docker build . -t coach
-    docker run -it coach /bin/bash
+    cd docker
+    make build_base && make build
+    make run
     ```
     
 
@@ -45,7 +46,7 @@ several parts, each testing the framework in different areas and strictness.
     The golden tests can be run using the following command:
     
     ```
-    python3 rl_coach/tests/golden_tests.py
+    python3 -m pytest rl_coach/tests -m golden_test
     ```
 
 * **Trace tests** -
@@ -57,4 +58,20 @@ several parts, each testing the framework in different areas and strictness.
     
     ```
     python3 rl_coach/tests/trace_tests.py -prl
+    ```
+
+* **Optional PyTest Flags** -
+
+    Using -k expr to select tests based on their name;
+    The -k command line option to specify an expression which implements a substring match on the test names
+    instead of the exact match on markers that -m provides. This makes it easy to select tests based on their names:
+    ```
+    python3 -m pytest rl_coach/tests -k Doom
+    ```
+    Using -v (--verbose) expr to show tests progress during running the tests, -v can be added with -m or with -k, to use -v see
+    the following commands:
+    ```
+    python3 -m pytest rl_coach/tests -v -m golden_test
+    OR
+    python3 -m pytest rl_coach/tests -v -k Doom
     ```

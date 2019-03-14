@@ -1,7 +1,8 @@
 from rl_coach.agents.rainbow_dqn_agent import RainbowDQNAgentParameters
-from rl_coach.base_parameters import VisualizationParameters, PresetValidationParameters
+from rl_coach.architectures.tensorflow_components.layers import Conv2d, Dense
+from rl_coach.base_parameters import VisualizationParameters, PresetValidationParameters, EmbedderScheme
 from rl_coach.core_types import EnvironmentEpisodes, EnvironmentSteps
-from rl_coach.environments.gym_environment import GymEnvironmentParameters
+from rl_coach.environments.gym_environment import GymEnvironmentParameters, ObservationSpaceType
 from rl_coach.filters.filter import NoOutputFilter, InputFilter
 from rl_coach.filters.reward.reward_clipping_filter import RewardClippingFilter
 from rl_coach.graph_managers.basic_rl_graph_manager import BasicRLGraphManager
@@ -26,6 +27,12 @@ agent_params.network_wrappers['main'].optimizer_epsilon = 1.5e-4
 agent_params.algorithm.num_steps_between_copying_online_weights_to_target = EnvironmentSteps(1000)  # 32k frames
 agent_params.memory.beta = LinearSchedule(0.4, 1, 12500000)  # 12.5M training iterations = 50M steps = 200M frames
 agent_params.memory.alpha = 0.5
+agent_params.network_wrappers['main'].input_embedders_parameters['observation'].scheme = \
+    [
+        Conv2d(32, [5, 1], [2, 1]),
+        Conv2d(64, [3, 1], 1),
+        Conv2d(64, [3, 1], 1)
+    ]
 
 ###############
 # Environment #
@@ -36,6 +43,7 @@ input_filter.add_reward_filter('clipping', RewardClippingFilter(-1.0, 1.0))
 env_params.level = "rl_coach.environments.user.btc:BitcoinEnv"
 env_params.default_input_filter = input_filter
 env_params.default_output_filter = NoOutputFilter()
+env_params.observation_space_type = ObservationSpaceType.Tensor
 
 ########
 # Test #

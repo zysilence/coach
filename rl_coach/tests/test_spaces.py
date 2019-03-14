@@ -14,7 +14,7 @@ def test_discrete():
     for i in range(100):
         assert 3 > action_space.sample() >= 0
     action_info = action_space.sample_with_info()
-    assert action_info.action_probability == 1. / 3
+    assert action_info.all_action_probabilities[0] == 1. / 3
     assert action_space.high == 2
     assert action_space.low == 0
 
@@ -132,18 +132,18 @@ def test_agent_selection():
 def test_observation_space():
     observation_space = ObservationSpace(np.array([1, 10]), -10, 10)
 
-    # testing that val_matches_space_definition works
-    assert observation_space.val_matches_space_definition(np.ones([1, 10]))
-    assert not observation_space.val_matches_space_definition(np.ones([2, 10]))
-    assert not observation_space.val_matches_space_definition(np.ones([1, 10]) * 100)
-    assert not observation_space.val_matches_space_definition(np.ones([1, 1, 10]))
+    # testing that contains works
+    assert observation_space.contains(np.ones([1, 10]))
+    assert not observation_space.contains(np.ones([2, 10]))
+    assert not observation_space.contains(np.ones([1, 10]) * 100)
+    assert not observation_space.contains(np.ones([1, 1, 10]))
 
-    # is_point_in_space_shape
-    assert observation_space.is_point_in_space_shape(np.array([0, 9]))
-    assert observation_space.is_point_in_space_shape(np.array([0, 0]))
-    assert not observation_space.is_point_in_space_shape(np.array([1, 8]))
-    assert not observation_space.is_point_in_space_shape(np.array([0, 10]))
-    assert not observation_space.is_point_in_space_shape(np.array([-1, 6]))
+    # is_valid_index
+    assert observation_space.is_valid_index(np.array([0, 9]))
+    assert observation_space.is_valid_index(np.array([0, 0]))
+    assert not observation_space.is_valid_index(np.array([1, 8]))
+    assert not observation_space.is_valid_index(np.array([0, 10]))
+    assert not observation_space.is_valid_index(np.array([-1, 6]))
 
 
 @pytest.mark.unit_test

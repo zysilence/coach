@@ -17,21 +17,10 @@
 import tensorflow as tf
 
 from rl_coach.architectures.tensorflow_components.layers import Dense
-
-from rl_coach.architectures.tensorflow_components.heads.head import Head, HeadParameters
+from rl_coach.architectures.tensorflow_components.heads.head import Head
 from rl_coach.base_parameters import AgentParameters
 from rl_coach.core_types import QActionStateValue
 from rl_coach.spaces import SpacesDefinition, BoxActionSpace, DiscreteActionSpace
-
-
-class QHeadParameters(HeadParameters):
-    def __init__(self, activation_function: str ='relu', name: str='q_head_params',
-                 num_output_head_copies: int = 1, rescale_gradient_from_head_by_factor: float = 1.0,
-                 loss_weight: float = 1.0, dense_layer=Dense):
-        super().__init__(parameterized_class=QHead, activation_function=activation_function, name=name,
-                         dense_layer=dense_layer, num_output_head_copies=num_output_head_copies,
-                         rescale_gradient_from_head_by_factor=rescale_gradient_from_head_by_factor,
-                         loss_weight=loss_weight)
 
 
 class QHead(Head):
@@ -45,6 +34,12 @@ class QHead(Head):
             self.num_actions = 1
         elif isinstance(self.spaces.action, DiscreteActionSpace):
             self.num_actions = len(self.spaces.action.actions)
+        else:
+            raise ValueError(
+                'QHead does not support action spaces of type: {class_name}'.format(
+                    class_name=self.spaces.action.__class__.__name__,
+                )
+            )
         self.return_type = QActionStateValue
         if agent_parameters.network_wrappers[self.network_name].replace_mse_with_huber_loss:
             self.loss_type = tf.losses.huber_loss
@@ -60,5 +55,3 @@ class QHead(Head):
             "Dense (num outputs = {})".format(self.num_actions)
         ]
         return '\n'.join(result)
-
-

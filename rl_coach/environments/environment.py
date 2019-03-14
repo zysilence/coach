@@ -60,10 +60,11 @@ class SingleLevelSelection(LevelSelection):
             logger.screen.error("No level has been selected. Please select a level using the -lvl command line flag, "
                                 "or change the level in the preset. \nThe available levels are: \n{}"
                                 .format(', '.join(sorted(self.levels.keys()))), crash=True)
-        if self.selected_level not in self.levels.keys():
+        selected_level = self.selected_level.lower()
+        if selected_level not in self.levels.keys():
             logger.screen.error("The selected level ({}) is not part of the available levels ({})"
-                                .format(self.selected_level, ', '.join(self.levels.keys())), crash=True)
-        return self.levels[self.selected_level]
+                                .format(selected_level, ', '.join(self.levels.keys())), crash=True)
+        return self.levels[selected_level]
 
 
 # class SingleLevelPerPhase(LevelSelection):
@@ -103,6 +104,9 @@ class EnvironmentParameters(Parameters):
         self.default_output_filter = None
         self.experiment_path = None
 
+        # Set target reward and target_success if present
+        self.target_success_rate = 1.0
+
     @property
     def path(self):
         return 'rl_coach.environments.environment:Environment'
@@ -111,7 +115,7 @@ class EnvironmentParameters(Parameters):
 class Environment(EnvironmentInterface):
     def __init__(self, level: LevelSelection, seed: int, frame_skip: int, human_control: bool,
                  custom_reward_threshold: Union[int, float], visualization_parameters: VisualizationParameters,
-                 **kwargs):
+                 target_success_rate: float=1.0, **kwargs):
         """
         :param level: The environment level. Each environment can have multiple levels
         :param seed: a seed for the random number generator of the environment
@@ -166,10 +170,14 @@ class Environment(EnvironmentInterface):
         if not self.native_rendering:
             self.renderer = Renderer()
 
+        # Set target reward and target_success if present
+        self.target_success_rate = target_success_rate
+
     @property
     def action_space(self) -> Union[List[ActionSpace], ActionSpace]:
         """
         Get the action space of the environment
+
         :return: the action space
         """
         return self._action_space
@@ -178,6 +186,7 @@ class Environment(EnvironmentInterface):
     def action_space(self, val: Union[List[ActionSpace], ActionSpace]):
         """
         Set the action space of the environment
+
         :return: None
         """
         self._action_space = val
@@ -186,6 +195,7 @@ class Environment(EnvironmentInterface):
     def state_space(self) -> Union[List[StateSpace], StateSpace]:
         """
         Get the state space of the environment
+
         :return: the observation space
         """
         return self._state_space
@@ -194,6 +204,7 @@ class Environment(EnvironmentInterface):
     def state_space(self, val: Union[List[StateSpace], StateSpace]):
         """
         Set the state space of the environment
+
         :return: None
         """
         self._state_space = val
@@ -202,6 +213,7 @@ class Environment(EnvironmentInterface):
     def goal_space(self) -> Union[List[ObservationSpace], ObservationSpace]:
         """
         Get the state space of the environment
+
         :return: the observation space
         """
         return self._goal_space
@@ -210,6 +222,7 @@ class Environment(EnvironmentInterface):
     def goal_space(self, val: Union[List[ObservationSpace], ObservationSpace]):
         """
         Set the goal space of the environment
+
         :return: None
         """
         self._goal_space = val
@@ -217,6 +230,7 @@ class Environment(EnvironmentInterface):
     def get_action_from_user(self) -> ActionType:
         """
         Get an action from the user keyboard
+
         :return: action index
         """
         if self.wait_for_explicit_human_action:
@@ -244,6 +258,7 @@ class Environment(EnvironmentInterface):
     def last_env_response(self) -> Union[List[EnvResponse], EnvResponse]:
         """
         Get the last environment response
+
         :return: a dictionary that contains the state, reward, etc.
         """
         return squeeze_list(self._last_env_response)
@@ -252,6 +267,7 @@ class Environment(EnvironmentInterface):
     def last_env_response(self, val: Union[List[EnvResponse], EnvResponse]):
         """
         Set the last environment response
+
         :param val: the last environment response
         """
         self._last_env_response = force_list(val)
@@ -259,11 +275,12 @@ class Environment(EnvironmentInterface):
     def step(self, action: ActionType) -> EnvResponse:
         """
         Make a single step in the environment using the given action
+
         :param action: an action to use for stepping the environment. Should follow the definition of the action space.
         :return: the environment response as returned in get_last_env_response
         """
         action = self.action_space.clip_action_to_space(action)
-        if self.action_space and not self.action_space.val_matches_space_definition(action):
+        if self.action_space and not self.action_space.contains(action):
             raise ValueError("The given action does not match the action space definition. "
                              "Action = {}, action space definition = {}".format(action, self.action_space))
 
@@ -311,20 +328,30 @@ class Environment(EnvironmentInterface):
     def render(self) -> None:
         """
         Call the environment function for rendering to the screen
+
+        :return: None
         """
         if self.native_rendering:
             self._render()
         else:
             self.renderer.render_image(self.get_rendered_image())
 
+    def handle_episode_ended(self) -> None:
+        """
+        End an episode
+
+        :return: None
+        """
+        self.dump_video_of_last_episode_if_needed()
+
     def reset_internal_state(self, force_environment_reset=False) -> EnvResponse:
         """
         Reset the environment and all the variable of the wrapper
+
         :param force_environment_reset: forces environment reset even when the game did not end
         :return: A dictionary containing the observation, reward, done flag, action and measurements
         """
 
-        self.dump_video_of_last_episode_if_needed()
         self._restart_environment_episode(force_environment_reset)
         self.last_episode_time = time.time()
 
@@ -356,6 +383,7 @@ class Environment(EnvironmentInterface):
     def get_random_action(self) -> ActionType:
         """
         Returns an action picked uniformly from the available actions
+
         :return: a numpy array with a random action
         """
         return self.action_space.sample()
@@ -363,6 +391,7 @@ class Environment(EnvironmentInterface):
     def get_available_keys(self) -> List[Tuple[str, ActionType]]:
         """
         Return a list of tuples mapping between action names and the keyboard key that triggers them
+
         :return: a list of tuples mapping between action names and the keyboard key that triggers them
         """
         available_keys = []
@@ -379,6 +408,7 @@ class Environment(EnvironmentInterface):
     def get_goal(self) -> GoalType:
         """
         Get the current goal that the agents needs to achieve in the environment
+
         :return: The goal
         """
         return self.goal
@@ -386,23 +416,23 @@ class Environment(EnvironmentInterface):
     def set_goal(self, goal: GoalType) -> None:
         """
         Set the current goal that the agent needs to achieve in the environment
+
         :param goal: the goal that needs to be achieved
         :return: None
         """
         self.goal = goal
 
     def should_dump_video_of_the_current_episode(self, episode_terminated=False):
-        if self.visualization_parameters.video_dump_methods:
-            for video_dump_method in force_list(self.visualization_parameters.video_dump_methods):
-                if not video_dump_method.should_dump(episode_terminated, **self.__dict__):
+        if self.visualization_parameters.video_dump_filters:
+            for video_dump_filter in force_list(self.visualization_parameters.video_dump_filters):
+                if not video_dump_filter.should_dump(episode_terminated, **self.__dict__):
                     return False
             return True
-        return False
+        return True
 
     def dump_video_of_last_episode_if_needed(self):
-        if self.visualization_parameters.video_dump_methods and self.last_episode_images != []:
-            if self.should_dump_video_of_the_current_episode(episode_terminated=True):
-                self.dump_video_of_last_episode()
+        if self.last_episode_images != [] and self.should_dump_video_of_the_current_episode(episode_terminated=True):
+            self.dump_video_of_last_episode()
 
     def dump_video_of_last_episode(self):
         frame_skipping = max(1, int(5 / self.frame_skip))
@@ -413,14 +443,6 @@ class Environment(EnvironmentInterface):
         if self.visualization_parameters.dump_mp4:
             logger.create_mp4(self.last_episode_images[::frame_skipping], name=file_name, fps=fps)
 
-    def log_to_screen(self):
-        # log to screen
-        log = OrderedDict()
-        log["Episode"] = self.episode_idx
-        log["Total reward"] = np.round(self.total_reward_in_current_episode, 2)
-        log["Steps"] = self.total_steps_counter
-        screen.log_dict(log, prefix=self.phase.value)
-
     # The following functions define the interaction with the environment.
     # Any new environment that inherits the Environment class should use these signatures.
     # Some of these functions are optional - please read their description for more details.
@@ -428,6 +450,7 @@ class Environment(EnvironmentInterface):
     def _take_action(self, action_idx: ActionType) -> None:
         """
         An environment dependent function that sends an action to the simulator.
+
         :param action_idx: the action to perform on the environment
         :return: None
         """
@@ -437,6 +460,7 @@ class Environment(EnvironmentInterface):
         """
         Updates the state from the environment.
         Should update self.observation, self.reward, self.done, self.measurements and self.info
+
         :return: None
         """
         raise NotImplementedError("")
@@ -444,6 +468,7 @@ class Environment(EnvironmentInterface):
     def _restart_environment_episode(self, force_environment_reset=False) -> None:
         """
         Restarts the simulator episode
+
         :param force_environment_reset: Force the environment to reset even if the episode is not done yet.
         :return: None
         """
@@ -452,6 +477,7 @@ class Environment(EnvironmentInterface):
     def _render(self) -> None:
         """
         Renders the environment using the native simulator renderer
+
         :return: None
         """
         pass
@@ -460,82 +486,18 @@ class Environment(EnvironmentInterface):
         """
         Return a numpy array containing the image that will be rendered to the screen.
         This can be different from the observation. For example, mujoco's observation is a measurements vector.
+
         :return: numpy array containing the image that will be rendered to the screen
         """
         return np.transpose(self.state['observation'], [1, 2, 0])
 
+    def get_target_success_rate(self) -> float:
+        return self.target_success_rate
 
-"""
-Video Dumping Methods
-"""
+    def close(self) -> None:
+        """
+        Clean up steps.
 
-
-class VideoDumpMethod(object):
-    """
-    Method used to decide when to dump videos
-    """
-    def should_dump(self, episode_terminated=False, **kwargs):
-        raise NotImplementedError("")
-
-
-class AlwaysDumpMethod(VideoDumpMethod):
-    """
-    Dump video for every episode
-    """
-    def __init__(self):
-        super().__init__()
-
-    def should_dump(self, episode_terminated=False, **kwargs):
-        return True
-
-
-class MaxDumpMethod(VideoDumpMethod):
-    """
-    Dump video every time a new max total reward has been achieved
-    """
-    def __init__(self):
-        super().__init__()
-        self.max_reward_achieved = -np.inf
-
-    def should_dump(self, episode_terminated=False, **kwargs):
-        # if the episode has not finished yet we want to be prepared for dumping a video
-        if not episode_terminated:
-            return True
-        if kwargs['total_reward_in_current_episode'] > self.max_reward_achieved:
-            self.max_reward_achieved = kwargs['total_reward_in_current_episode']
-            return True
-        else:
-            return False
-
-
-class EveryNEpisodesDumpMethod(object):
-    """
-    Dump videos once in every N episodes
-    """
-    def __init__(self, num_episodes_between_dumps: int):
-        super().__init__()
-        self.num_episodes_between_dumps = num_episodes_between_dumps
-        self.last_dumped_episode = 0
-        if num_episodes_between_dumps < 1:
-            raise ValueError("the number of episodes between dumps should be a positive number")
-
-    def should_dump(self, episode_terminated=False, **kwargs):
-        if kwargs['episode_idx'] >= self.last_dumped_episode + self.num_episodes_between_dumps - 1:
-            self.last_dumped_episode = kwargs['episode_idx']
-            return True
-        else:
-            return False
-
-
-class SelectedPhaseOnlyDumpMethod(object):
-    """
-    Dump videos when the phase of the environment matches a predefined phase
-    """
-    def __init__(self, run_phases: Union[RunPhase, List[RunPhase]]):
-        self.run_phases = force_list(run_phases)
-
-    def should_dump(self, episode_terminated=False, **kwargs):
-        if kwargs['_phase'] in self.run_phases:
-            return True
-        else:
-            return False
+        :return: None
+        """
+        pass
