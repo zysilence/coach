@@ -443,11 +443,6 @@ class GraphManager(object):
             result = self.top_level_manager.step(None)
             steps_end = self.environments[0].total_steps_counter
 
-            # [sfan] if env returns no result, the evaluation is terminated
-            if result.next_state.get('observation') is None:
-                self.total_steps_counters[self.phase][steps.__class__] = count_end
-                hold_until_a_full_episode = False
-
             # add the diff between the total steps before and after stepping, such that environment initialization steps
             # (like in Atari) will not be counted.
             # We add at least one step so that even if no steps were made (in case no actions are taken in the training
@@ -457,6 +452,10 @@ class GraphManager(object):
             if result.game_over:
                 self.handle_episode_ended()
                 self.reset_required = True
+
+            # [sfan] if env returns no result, the evaluation is terminated
+            if result.next_state.get('observation') is None:
+                return True
 
     def train_and_act(self, steps: StepMethod) -> None:
         """
@@ -506,8 +505,10 @@ class GraphManager(object):
                 # act for at least `steps`, though don't interrupt an episode
                 count_end = self.current_step_counter + steps
                 while self.current_step_counter < count_end:
-                    self.act(EnvironmentEpisodes(1))
+                    is_terminal = self.act(EnvironmentEpisodes(1))
                     self.sync()
+                    if is_terminal:
+                        break
         if self.should_stop():
             self.flush_finished()
             screen.success("Reached required success rate. Exiting.")
