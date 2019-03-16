@@ -28,27 +28,24 @@ def main():
     period = args.period
 
     df = pd.read_csv(os.path.join(os.path.dirname(__file__), 'bitcoin-historical-data', source))
-    df['Raw_time'] = df['Day'].apply(str) + df['Time'].apply(str)
+    df['Raw_time'] = df['Day'].apply(str) + df['Time'].apply(str).apply(lambda x: x.zfill(6))
     df['Timestamp'] = pd.to_datetime(df['Raw_time'], format='%Y%m%d%H%M%S')
-
-
-
-
-
+    # df['Timestamp'] = df['Timestamp'].astype('int64') // 1e9
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='s')
     df.index = df['Timestamp'].tolist()
-
-    df_out = pd.DataFrame(columns=df.columns)
+    columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume_(XAU)', 'Volume_(Currency)', 'Weighted_Price']
+    df_out = pd.DataFrame(columns=columns)
     df_out['Open'] = df['Open'].resample(period).first()
     df_out['High'] = df['High'].resample(period).max()
     df_out['Low'] = df['Low'].resample(period).min()
     df_out['Close'] = df['Close'].resample(period).last()
-    df_out['Volume_(BTC)'] = df['Volume_(BTC)'].resample(period).sum()
-    df_out['Volume_(Currency)'] = df['Volume_(Currency)'].resample(period).sum()
-    df_out['Weighted_Price'] = df['Weighted_Price'].resample(period).mean()
+    df_out['Volume'] = df['Volume'].resample(period).sum()
+    # df_out['Volume_(Currency)'] = df['Volume'].resample(period).sum()
+    # df_out['Weighted_Price'] = df['Close'].resample(period).mean()
     df_out['Timestamp'] = df_out.index.view('int64') // 1e9
 
-    df_out.to_csv(output, index=0)
+    output_path = os.path.join(os.path.dirname(__file__), 'bitcoin-historical-data', output)
+    df_out.to_csv(output_path, index=0)
 
 
 if __name__ == '__main__':
