@@ -13,7 +13,7 @@ from rl_coach.schedules import LinearSchedule
 # Graph Scheduling #
 ####################
 schedule_params = ScheduleParameters()
-schedule_params.improve_steps = EnvironmentSteps(400000)
+schedule_params.improve_steps = EnvironmentSteps(800000)
 schedule_params.steps_between_evaluation_periods = EnvironmentEpisodes(10)
 schedule_params.evaluation_steps = EnvironmentSteps(1)
 schedule_params.heatup_steps = EnvironmentSteps(1000)
@@ -45,6 +45,12 @@ env_params.default_input_filter = input_filter
 env_params.default_output_filter = NoOutputFilter()
 env_params.observation_space_type = ObservationSpaceType.Tensor
 
+###############
+# Visualization #
+###############
+visual_params = VisualizationParameters()
+visual_params.native_rendering = True
+
 ########
 # Test #
 ########
@@ -54,5 +60,5 @@ preset_validation_params.min_reward_threshold = -1
 preset_validation_params.max_episodes_to_achieve_reward = 10
 
 graph_manager = BasicRLGraphManager(agent_params=agent_params, env_params=env_params,
-                                    schedule_params=schedule_params, vis_params=VisualizationParameters(),
+                                    schedule_params=schedule_params, vis_params=visual_params,
                                     preset_validation_params=preset_validation_params)

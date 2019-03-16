@@ -34,6 +34,12 @@ env_params.level = "rl_coach.environments.user.btc:BitcoinEnv"
 env_params.default_input_filter = input_filter
 env_params.default_output_filter = NoOutputFilter()
 
+###############
+# Visualization #
+###############
+visual_params = VisualizationParameters()
+visual_params.native_rendering = True
+
 ########
 # Test #
 ########
@@ -43,5 +49,5 @@ preset_validation_params.min_reward_threshold = -1
 preset_validation_params.max_episodes_to_achieve_reward = 10
 
 graph_manager = BasicRLGraphManager(agent_params=agent_params, env_params=env_params,
-                                    schedule_params=schedule_params, vis_params=VisualizationParameters(),
+                                    schedule_params=schedule_params, vis_params=visual_params,
                                     preset_validation_params=preset_validation_params)
