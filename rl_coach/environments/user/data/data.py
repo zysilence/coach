@@ -42,43 +42,26 @@ class Data(object):
             'High': 'high',
             'Low': 'low',
             'Close': 'close',
-            'Volume_(BTC)': 'volume_btc',
-            'Volume_(Currency)': 'volume',
-            'Weighted_Price': 'vwap'
+            'Volume': 'volume',
         }
+        self.target = "close"
 
-        filenames = {
-            # 'bitstamp': 'bitstampUSD_1-min_data_2012-01-01_to_2018-06-27.csv',
-            # 'coinbase': 'coinbaseUSD_1-min_data_2014-12-01_to_2018-06-27.csv',
-            'coinbase': 'coinbaseUSD_1D_data_2014-12-01_to_2018-06-27.csv',
-            # 'coinbase': 'coinbaseUSD_1H_data_2014-12-01_to_2018-06-27.csv',
-            # 'coincheck': 'coincheckJPY_1-min_data_2014-10-31_to_2018-06-27.csv'
-        }
-        primary_table = 'coinbase'
-        self.target = "{}_close".format(primary_table)
+        filename = config_json['DATA']['file_name']
 
-        # [sfan] produce data of period which is read from the config file
-        period = config_json['DATA']['period']  # In minutes
-        df = None
-        for table, filename in filenames.items():
-            filename = "{}USD_{}_data_2014-12-01_to_2018-06-27.csv".format(table, period)
-            df_ = pd.read_csv(path.join(path.dirname(__file__), 'populate', 'bitcoin-historical-data', filename))
-            col_renames_ = {k: "{}_{}".format(table, v) for k, v in col_renames.items()}
-            df_ = df_.rename(columns=col_renames_)
-            ts = "{}_timestamp".format(table)
-            df_[ts] = pd.to_datetime(df_[ts], unit='s')
-            self.raw_data = df_
-            # self.raw_data = self.raw_data.rename(columns={ts: 'date'})
-            df_ = df_.set_index(ts)
-            self.raw_data = self.raw_data.set_index(ts, drop=False)
-            df = df_ if df is None else df.join(df_)
+        df = pd.read_csv(path.join(path.dirname(__file__), 'populate', 'bitcoin-historical-data', filename))
+        df = df.rename(columns=col_renames)
+        ts = "timestamp"
+        df[ts] = pd.to_datetime(df[ts], unit='s')
+        self.raw_data = df
+        # self.raw_data = self.raw_data.rename(columns={ts: 'date'})
+        df = df.set_index(ts)
+        self.raw_data = self.raw_data.set_index(ts, drop=False)
 
-            # [sfan] Select features
-            features = config_json['DATA']['features']
-            columns = ["{}_{}".format(table, feature) for feature in features]
-            df = df[columns]
-            columns.append('{}_{}'.format(table, 'timestamp'))
-            self.raw_data = self.raw_data[columns]
+        # [sfan] Select features
+        features = config_json['DATA']['features']
+        df = df[features]
+        features.append('timestamp')
+        self.raw_data = self.raw_data[features]
 
         # too quiet before 2015, time waste. copy() to avoid pandas errors
         # [sfan] start year is read from the config file
@@ -150,7 +133,7 @@ class Data(object):
             y = self.df.iloc[offset+self.window]
             raw = self.raw_data[offset:offset+self.window]
             # [sfan] normalized by close price of the last timestep in the window
-            base = X.iloc[-1]['coinbase_close']
+            base = X.iloc[-1]['close']
             X = X / base
             y = y / base
         except IndexError:

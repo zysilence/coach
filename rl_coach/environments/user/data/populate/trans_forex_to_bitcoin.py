@@ -33,7 +33,8 @@ def main():
     # df['Timestamp'] = df['Timestamp'].astype('int64') // 1e9
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='s')
     df.index = df['Timestamp'].tolist()
-    columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume_(XAU)', 'Volume_(Currency)', 'Weighted_Price']
+    # columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume', 'Volume_(Currency)', 'Weighted_Price']
+    columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
     df_out = pd.DataFrame(columns=columns)
     df_out['Open'] = df['Open'].resample(period).first()
     df_out['High'] = df['High'].resample(period).max()

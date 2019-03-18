@@ -37,8 +37,8 @@ def main():
     df_out['Low'] = df['Low'].resample(period).min()
     df_out['Close'] = df['Close'].resample(period).last()
     df_out['Volume'] = df['Volume'].resample(period).sum()
-    df_out['Volume_(Currency)'] = df['Volume_(Currency)'].resample(period).sum()
-    df_out['Weighted_Price'] = df['Weighted_Price'].resample(period).mean()
+    # df_out['Volume_(Currency)'] = df['Volume_(Currency)'].resample(period).sum()
+    # df_out['Weighted_Price'] = df['Weighted_Price'].resample(period).mean()
     df_out['Timestamp'] = df_out.index.view('int64') // 1e9
 
     output_path = os.path.join(os.path.dirname(__file__), 'bitcoin-historical-data', output)
