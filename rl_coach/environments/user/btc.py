@@ -376,9 +376,9 @@ class BitcoinEnv(gym.Env):
             return None
 
         df_history = self.raw_states_.copy()
-        columns = ['coinbase_timestamp', 'coinbase_open', 'coinbase_high', 'coinbase_low', 'coinbase_close']
+        columns = ['timestamp', 'open', 'high', 'low', 'close']
 
-        df_history['coinbase_timestamp'] = df_history['coinbase_timestamp'].map(lambda x: mdates.date2num(x))
+        df_history['timestamp'] = df_history['timestamp'].map(lambda x: mdates.date2num(x))
         df_history['ii'] = range(len(df_history))
         ohlc = df_history['ii'].map(lambda x: tuple(df_history.iloc[x][columns])).tolist()
         weekday_ohlc = [tuple([i]+list(item[1:])) for i, item in enumerate(ohlc)]
