@@ -13,7 +13,7 @@ from rl_coach.schedules import LinearSchedule
 # Graph Scheduling #
 ####################
 schedule_params = ScheduleParameters()
-schedule_params.improve_steps = EnvironmentSteps(800000)
+schedule_params.improve_steps = EnvironmentSteps(1600000)
 schedule_params.steps_between_evaluation_periods = EnvironmentEpisodes(10)
 schedule_params.evaluation_steps = EnvironmentSteps(1)
 schedule_params.heatup_steps = EnvironmentSteps(1000)
@@ -33,6 +33,16 @@ agent_params.network_wrappers['main'].input_embedders_parameters['observation'].
         Conv2d(64, [3, 1], 1),
         Conv2d(64, [3, 1], 1)
     ]
+"""
+agent_params.network_wrappers['main'].input_embedders_parameters['observation'].scheme = \
+    [
+    Conv2d(32, [5, 1], [2, 1]),
+    Conv2d(64, [3, 1], 1),
+    Conv2d(64, [3, 1], 1),
+    Conv2d(128, [3, 1], 1),
+    Conv2d(256, [3, 1], 1)
+    ]
+"""
 
 ###############
 # Environment #
