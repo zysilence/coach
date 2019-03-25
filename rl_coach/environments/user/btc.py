@@ -69,8 +69,9 @@ class BitcoinEnv(gym.Env):
         # Action space
         # see {last_good_commit_ for action_types other than 'single_discrete'
         # In single_discrete, we allow buy2%, sell2%, hold (and nothing else)
-        # [sfan] 0: short position; 1: hold a position
-        self.actions_ = dict(type='int', shape=(), num_actions=2)
+        # [sfan] 0: empty; 1: long position; 2: short position
+        num_actions = len(self.hypers.ACTION.pct_map)
+        self.actions_ = dict(type='int', shape=(), num_actions=num_actions)
 
         # Observation space
         # width = step-window (150 time-steps)
@@ -80,7 +81,7 @@ class BitcoinEnv(gym.Env):
         shape = (self.hypers.STATE.step_window, 1, self.cols_)
         self.states_ = dict(type='float', shape=shape)
 
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Discrete(num_actions)
         self.observation_space = spaces.Box(low=-2, high=2, shape=(self.hypers.STATE.step_window, 1, self.cols_))
 
         self.seed()
@@ -161,13 +162,10 @@ class BitcoinEnv(gym.Env):
         """
         acc = self.acc[self.mode]
         totals = acc.step.totals
-        acc.step.signals.append(float(action))
-
         act_pct = self.hypers.ACTION.pct_map[str(action)]
-        fee_rate = self.hypers.REWARD.fee_rate
-        # act_btc = act_pct * (acc.step.cash if act_pct > 0 else acc.step.value)
-        act_btc = act_pct * acc.step.cash
+        acc.step.signals.append(act_pct)
 
+        fee_rate = self.hypers.REWARD.fee_rate
         """
         fee = {
             Exchange.GDAX: 0.0025,  # https://support.gdax.com/customer/en/portal/articles/2425097-what-are-the-fees-on-gdax-
@@ -175,14 +173,32 @@ class BitcoinEnv(gym.Env):
         }[EXCHANGE]
         """
 
-        # Perform the trade. In training mode, we'll let it dip into negative here, but then kill and punish below.
-        # In testing/live, we'll just block the trade if they can't afford it
-        if act_pct > 0 and acc.step.value == 0 and acc.step.cash >= self.stop_loss:
-            self.fee = act_btc * fee_rate
-            acc.step.value += act_btc - self.fee
-            # acc.step.value += act_btc
-            acc.step.cash -= act_btc
-        if act_pct == 0 and acc.step.value > 0:
+        # Perform the trade.
+        # "act_pct == 0": take a short position(空仓)
+        # "act_pct > 0": buying lone(做多，若已经做多了则持仓)
+        # "act_pct < 0": selling short(做空，若已经做空了则持仓)
+        # "acc.step.value < 0": means you have already sold short(已经做空)
+        # "acc.step.value = 0": means you have taken a short position(空仓)
+        # "acc.step.value > 0": means you have already bought long(已经做多)
+        if act_pct > 0:
+            if acc.step.value == 0 and acc.step.cash >= self.stop_loss:
+                # 直接买入多单
+                act_value = act_pct * acc.step.cash
+                self.fee = abs(act_value) * fee_rate
+                acc.step.value += act_value - self.fee
+                acc.step.cash -= act_value
+            elif acc.step.value < 0:
+                # 第一步：平掉空单
+                fee = abs(acc.step.value) * fee_rate
+                acc.step.cash += acc.step.value - fee
+                acc.step.value = 0
+                # 第二步：买入多单
+                if acc.step.cash >= self.stop_loss:
+                    act_value = act_pct * acc.step.cash
+                    fee = abs(act_value) * fee_rate
+                    acc.step.value += act_value - fee
+                    acc.step.cash -= act_value
+        elif act_pct == 0:
             # self.fee = acc.step.value * fee_rate
             # acc.step.cash += acc.step.value - self.fee
             acc.step.cash += acc.step.value
@@ -191,6 +207,20 @@ class BitcoinEnv(gym.Env):
             #   Trade once per episode. When shorting the trade, the episode is terminated.
             if self.hypers.EPISODE.trade_once:
                 self.terminal = True
+        else:
+            if acc.step.value == 0:
+                # 直接空单
+                act_value = act_pct * acc.step.cash
+                acc.step.value += act_value
+                acc.step.cash -= act_value
+            elif acc.step.value > 0:
+                # 第一步：平掉多单
+                acc.step.cash += acc.step.value
+                acc.step.value = 0
+                # 第二步：空单
+                act_value = act_pct * acc.step.cash
+                acc.step.value += act_value
+                acc.step.cash -= act_value
 
         # next delta. [1,2,2].pct_change() == [NaN, 1, 0]
         # pct_change = self.prices_diff[acc.step.i + 1]
@@ -354,6 +384,7 @@ class BitcoinEnv(gym.Env):
 
         eq_0 = (signals == 0).sum()
         gt_0 = (signals > 0).sum()
+        lt_0 = (signals < 0).sum()
 
         stats = {
             "profit": profit,
@@ -361,7 +392,8 @@ class BitcoinEnv(gym.Env):
             "episode_len": acc.step.i,
             "action": {
                 "0": eq_0,
-                "1": gt_0
+                "1": gt_0,
+                "2": lt_0
             }
         }
 
