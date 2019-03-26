@@ -211,16 +211,16 @@ class BitcoinEnv(gym.Env):
             if acc.step.value == 0:
                 # 直接空单
                 act_value = act_pct * acc.step.cash
-                acc.step.value += act_value
-                acc.step.cash -= act_value
+                acc.step.value -= act_value
+                acc.step.cash += act_value
             elif acc.step.value > 0:
                 # 第一步：平掉多单
                 acc.step.cash += acc.step.value
                 acc.step.value = 0
                 # 第二步：空单
                 act_value = act_pct * acc.step.cash
-                acc.step.value += act_value
-                acc.step.cash -= act_value
+                acc.step.value -= act_value
+                acc.step.cash += act_value
 
         # next delta. [1,2,2].pct_change() == [NaN, 1, 0]
         # pct_change = self.prices_diff[acc.step.i + 1]
