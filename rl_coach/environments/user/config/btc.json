@@ -27,9 +27,10 @@
   },
   "EPISODE": {
     "max_len": 20,
+    "trade_once": false,
+    "leverage": 100,
     "stop_loss_fraction": 0,
     "force_stop_loss": true,
-    "trade_once": false,
     "mode": "train"
   },
   "REWARD": {

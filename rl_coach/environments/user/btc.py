@@ -62,9 +62,12 @@ class BitcoinEnv(gym.Env):
         self.min_trade = {Exchange.GDAX: .01, Exchange.KRAKEN: .002}[EXCHANGE]
         # self.update_btc_price()
 
-        # [sfan] stop loss value
+        # [sfan] stop loss value: minimal cash remained
         stop_loss_fraction = self.hypers.EPISODE.stop_loss_fraction
         self.stop_loss = self.start_cash * stop_loss_fraction
+
+        # [sfan] leverage
+        self.leverage = self.hypers.EPISODE.leverage
 
         # Action space
         # see {last_good_commit_ for action_types other than 'single_discrete'
@@ -210,17 +213,18 @@ class BitcoinEnv(gym.Env):
         else:
             if acc.step.value == 0:
                 # 直接空单
+                # 注意：act_value小于0
                 act_value = act_pct * acc.step.cash
-                acc.step.value -= act_value
-                acc.step.cash += act_value
+                acc.step.value += act_value
+                acc.step.cash -= act_value
             elif acc.step.value > 0:
                 # 第一步：平掉多单
                 acc.step.cash += acc.step.value
                 acc.step.value = 0
                 # 第二步：空单
                 act_value = act_pct * acc.step.cash
-                acc.step.value -= act_value
-                acc.step.cash += act_value
+                acc.step.value += act_value
+                acc.step.cash -= act_value
 
         # next delta. [1,2,2].pct_change() == [NaN, 1, 0]
         # pct_change = self.prices_diff[acc.step.i + 1]
