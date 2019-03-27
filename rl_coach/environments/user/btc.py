@@ -432,10 +432,13 @@ class BitcoinEnv(gym.Env):
 
         action_ohlc = []
         for i, item in enumerate(self.action_history):
-            if item:
+            if item > 0:
                 tuple_item = (i, 0, 1, 0, 1)
-            else:
+            elif item == 0:
                 tuple_item = (i, 0, 0, 0, 0)
+            else:
+                tuple_item = (i, 0, -1, 0, -1)
+
             action_ohlc.append(tuple_item)
         # action_ohlc = [tuple([i] + []) for i, item in enumerate(self.action_history)]
 
