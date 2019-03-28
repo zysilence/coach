@@ -7,6 +7,7 @@ from rl_coach.filters.filter import NoOutputFilter, InputFilter
 from rl_coach.filters.reward.reward_clipping_filter import RewardClippingFilter
 from rl_coach.graph_managers.basic_rl_graph_manager import BasicRLGraphManager
 from rl_coach.graph_managers.graph_manager import ScheduleParameters
+from rl_coach.memories.memory import MemoryGranularity
 from rl_coach.schedules import LinearSchedule
 
 ####################
@@ -25,6 +26,7 @@ agent_params = RainbowDQNAgentParameters()
 agent_params.network_wrappers['main'].learning_rate = 0.0000625
 agent_params.network_wrappers['main'].optimizer_epsilon = 1.5e-4
 agent_params.algorithm.num_steps_between_copying_online_weights_to_target = EnvironmentSteps(1000)  # 32k frames
+agent_params.memory.max_size = (MemoryGranularity.Transitions, 100000)  # default: 1000000
 agent_params.memory.beta = LinearSchedule(0.4, 1, 12500000)  # 12.5M training iterations = 50M steps = 200M frames
 agent_params.memory.alpha = 0.5
 agent_params.network_wrappers['main'].input_embedders_parameters['observation'].scheme = \
