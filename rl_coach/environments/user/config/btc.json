@@ -28,7 +28,7 @@
   "EPISODE": {
     "max_len": 20,
     "trade_once": false,
-    "leverage": 100,
+    "leverage": false,
     "stop_loss_fraction": 0,
     "force_stop_loss": true,
     "mode": "train"

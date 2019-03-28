@@ -66,7 +66,8 @@ class BitcoinEnv(gym.Env):
         stop_loss_fraction = self.hypers.EPISODE.stop_loss_fraction
         self.stop_loss = self.start_cash * stop_loss_fraction
 
-        # [sfan] leverage
+        # [sfan] 是否是保证金交易
+        # 如果是保证金交易，则state和reward与价格差值有关；反之，与价格的比例有关
         self.leverage = self.hypers.EPISODE.leverage
 
         # Action space
