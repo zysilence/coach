@@ -43,6 +43,10 @@ class BitcoinEnv(gym.Env):
         # [sfan] default: 'train'; can be set by 'set_mode' method
         self.mode = self.hypers.EPISODE.mode
 
+        # [sfan] 是否是保证金交易
+        # 如果是保证金交易，则state和reward与价格差值有关；反之，与价格的比例有关
+        self.leverage = self.hypers.EPISODE.leverage
+
         # We have these "accumulator" objects, which collect values over steps, over episodes, etc. Easier to keep
         # same-named variables separate this way.
         acc = dict(
@@ -56,7 +60,7 @@ class BitcoinEnv(gym.Env):
         self.acc = Box(train=copy.deepcopy(acc), test=copy.deepcopy(acc))
         self.acc.train.step.hold_value = self.start_value + self.start_cash
         self.acc.test.step.hold_value = self.start_value + self.start_cash
-        self.data = Data(window=self.hypers.STATE.step_window, indicators={}, mode=self.mode)
+        self.data = Data(window=self.hypers.STATE.step_window, indicators={}, mode=self.mode, leverage=self.leverage)
 
         # gdax min order size = .01btc; kraken = .002btc
         self.min_trade = {Exchange.GDAX: .01, Exchange.KRAKEN: .002}[EXCHANGE]
@@ -65,10 +69,6 @@ class BitcoinEnv(gym.Env):
         # [sfan] stop loss value: minimal cash remained
         stop_loss_fraction = self.hypers.EPISODE.stop_loss_fraction
         self.stop_loss = self.start_cash * stop_loss_fraction
-
-        # [sfan] 是否是保证金交易
-        # 如果是保证金交易，则state和reward与价格差值有关；反之，与价格的比例有关
-        self.leverage = self.hypers.EPISODE.leverage
 
         # Action space
         # see {last_good_commit_ for action_types other than 'single_discrete'
@@ -115,7 +115,7 @@ class BitcoinEnv(gym.Env):
     def set_mode(self, mode):
         if self.mode != mode:
             self.mode = mode
-            self.data = Data(window=self.hypers.STATE.step_window, indicators={}, mode=self.mode)
+            self.data = Data(window=self.hypers.STATE.step_window, indicators={}, mode=self.mode, leverage=self.leverage)
 
     # We don't want random-seeding for reproducibilityy! We _want_ two runs to give different results, because we only
     # trust the hyper combo which consistently gives positive results.

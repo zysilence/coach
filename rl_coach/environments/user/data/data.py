@@ -27,10 +27,11 @@ EXCHANGE = Exchange.KRAKEN
 
 
 class Data(object):
-    def __init__(self, window=300, indicators={}, mode='train'):
+    def __init__(self, window=300, indicators={}, mode='train', leverage=False):
         self.window = window
         self.indicators = indicators
         self.mode = mode
+        self.leverage = leverage
 
         # self.ep_stride = ep_len  # disjoint
         # self.ep_stride = 100  # overlap; shift each episode by x seconds.
