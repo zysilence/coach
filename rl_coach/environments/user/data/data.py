@@ -49,18 +49,18 @@ class Data(object):
 
         filename = config_json['DATA']['file_name']
 
-        df = pd.read_csv(path.join(path.dirname(__file__), 'populate', 'bitcoin-historical-data', filename))
-        df = df.rename(columns=col_renames)
+        self.df = pd.read_csv(path.join(path.dirname(__file__), 'populate', 'bitcoin-historical-data', filename))
+        self.df = self.df.rename(columns=col_renames)
         ts = "timestamp"
-        df[ts] = pd.to_datetime(df[ts], unit='s')
-        self.raw_data = df
+        self.df[ts] = pd.to_datetime(self.df[ts], unit='s')
+        self.raw_data = self.df.copy()
         # self.raw_data = self.raw_data.rename(columns={ts: 'date'})
-        df = df.set_index(ts)
+        self.df = self.df.set_index(ts)
         self.raw_data = self.raw_data.set_index(ts, drop=False)
 
         # [sfan] Select features
         features = config_json['DATA']['features']
-        df = df[features]
+        self.df = self.df[features]
         features.append('timestamp')
         self.raw_data = self.raw_data[features]
 
@@ -73,12 +73,13 @@ class Data(object):
         else:
             start_date = config_json['DATA']['test_start_date']
             end_date = config_json['DATA']['test_end_date']
-        df = df.loc[start_date:end_date].copy()
+        self.df = self.df.loc[start_date:end_date].copy()
         self.raw_data = self.raw_data.loc[start_date:end_date].copy()
 
         # [sfan] fill nan
-        df = df.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
+        self.df = self.df.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
         self.raw_data = self.raw_data.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
+
         # [sfan] Use scale or not?
         """
         df = pd.DataFrame(
@@ -117,8 +118,6 @@ class Data(object):
         # [sfan] 'cash' and 'value' features are filled in every timestep with default value 0
         df['cash'], df['value'] = 0., 0.
         """
-
-        self.df = df
 
     def offset(self, ep_start, step):
         return ep_start + step

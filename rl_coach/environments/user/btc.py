@@ -13,7 +13,6 @@ env back to Gym format. Anyone wanna give it a go?
 from box import Box
 import copy
 import json
-import logging
 import os
 
 import gym
@@ -67,8 +66,7 @@ class BitcoinEnv(gym.Env):
         # self.update_btc_price()
 
         # [sfan] stop loss value: minimal cash remained
-        stop_loss_fraction = self.hypers.EPISODE.stop_loss_fraction
-        self.stop_loss = self.start_cash * stop_loss_fraction
+        self.stop_loss = self.start_cash * self.hypers.EPISODE.stop_loss_fraction
 
         # Action space
         # see {last_good_commit_ for action_types other than 'single_discrete'
@@ -89,10 +87,6 @@ class BitcoinEnv(gym.Env):
         self.observation_space = spaces.Box(low=-2, high=2, shape=(self.hypers.STATE.step_window, 1, self.cols_))
 
         self.seed()
-
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.INFO)
 
         self.is_stop_loss = False
         self.terminal = False
@@ -152,7 +146,7 @@ class BitcoinEnv(gym.Env):
         # self.data.reset_cash_val()
         # self.data.set_cash_val(acc.ep.i, acc.step.i, 0., 0.)
         self.states_, self.raw_states_ = self.get_next_state()
-        self.raw_next_states_ = self.raw_states_
+        self.raw_next_states_ = None if self.raw_states_ is None else self.raw_states_.copy()
 
         return self.states_
 
@@ -251,10 +245,10 @@ class BitcoinEnv(gym.Env):
             acc.step.value/self.start_value
         )
         """
-        self.raw_states_ = self.raw_next_states_
+        self.raw_states_ = None if self.raw_next_states_ is None else self.raw_next_states_.copy()
         next_state, raw_state = self.get_next_state()
-        self.states_ = next_state
-        self.raw_next_states_ = raw_state
+        self.states_ = next_state.copy()
+        self.raw_next_states_ = raw_state.copy()
 
         # [sfan] Episode terminating condition 4:
         if next_state is None:
