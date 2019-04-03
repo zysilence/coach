@@ -404,7 +404,9 @@ class Agent(AgentInterface):
             # TODO verbosity was mistakenly removed from task_parameters on release 0.11.0, need to bring it back
             # if self.ap.is_a_highest_level_agent or self.ap.task_parameters.verbosity == "high":
             if self.ap.is_a_highest_level_agent:
-                screen.log_title("{}: Starting evaluation phase".format(self.name))
+                # [sfan] decrease the frequency of logging to screen
+                if self.current_episode % 1000 == 0:
+                    screen.log_title("{}: Starting evaluation phase".format(self.name))
 
         elif ending_evaluation:
             # we write to the next episode, because it could be that the current episode was already written
@@ -425,8 +427,10 @@ class Agent(AgentInterface):
             # TODO verbosity was mistakenly removed from task_parameters on release 0.11.0, need to bring it back
             # if self.ap.is_a_highest_level_agent or self.ap.task_parameters.verbosity == "high":
             if self.ap.is_a_highest_level_agent:
-                screen.log_title("{}: Finished evaluation phase. Success rate = {}, Avg Total Reward = {}"
-                                 .format(self.name, np.round(success_rate, 2), np.round(evaluation_reward, 2)))
+                # [sfan] decrease the frequency of logging to screen
+                if self.current_episode % 1000 == 0:
+                    screen.log_title("{}: Finished evaluation phase. Success rate = {}, Avg Total Reward = {}"
+                                     .format(self.name, np.round(success_rate, 2), np.round(evaluation_reward, 2)))
 
     def call_memory(self, func, args=()):
         """
@@ -464,7 +468,9 @@ class Agent(AgentInterface):
         log["Exploration"] = np.round(self.exploration_policy.get_control_param(), 2)
         log["Steps"] = self.total_steps_counter
         log["Training iteration"] = self.training_iteration
-        screen.log_dict(log, prefix=self.phase.value)
+        # [sfan] decrease the frequency of logging to screen
+        if self.current_episode % 1000 == 0:
+            screen.log_dict(log, prefix=self.phase.value)
 
     def update_step_in_episode_log(self) -> None:
         """
