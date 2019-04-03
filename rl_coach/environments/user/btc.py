@@ -228,11 +228,14 @@ class BitcoinEnv(gym.Env):
 
         # [sfan]
         hold_before = totals.trade[-1]
-        acc.step.hold_value = pct_change * hold_before
-        # calculate what the reward would be "if I held", to calculate the actual reward's _advantage_ over holding
-        totals.hold.append(acc.step.hold_value)
+        if self.leverage:
+            acc.step.hold_value = pct_change + hold_before
+            acc.step.value += pct_change
+        else:
+            acc.step.hold_value = pct_change * hold_before
+            acc.step.value = pct_change * acc.step.value
 
-        acc.step.value = pct_change * acc.step.value
+        totals.hold.append(acc.step.hold_value)
         total_now = acc.step.value + acc.step.cash
         totals.trade.append(total_now)
 
@@ -317,7 +320,10 @@ class BitcoinEnv(gym.Env):
         action = acc.step.signals[-1]
 
         if self.hypers.EPISODE.force_stop_loss and self.is_stop_loss:
-            reward = self.hypers.EPISODE.stop_loss_fraction - 1
+            if self.leverage:
+                reward = max(totals.trade[-1] - totals.trade[-2], self.hypers.EPISODE.stop_loss_fraction * (-1))
+            else:
+                reward = self.hypers.EPISODE.stop_loss_fraction - 1
         else:
             reward = totals.trade[-1] - totals.trade[-2]
 

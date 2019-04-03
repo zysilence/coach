@@ -1,14 +1,14 @@
 import json
 from os import path
 from enum import Enum
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sqlalchemy import create_engine
-import os
 
 # From connecting source file, `import engine` and run `engine.connect()`. Need each connection to be separate
 # (see https://stackoverflow.com/questions/3724900/python-ssl-problem-with-multiprocessing)
-config_json = json.load(open(os.path.dirname(__file__) + '/../config/btc.json'))
+config_json = json.load(open(path.dirname(__file__) + '/../config/btc.json'))
 DB = config_json['DB_HISTORY'].split('/')[-1]
 engine_runs = create_engine(config_json['DB_RUNS'])
 
@@ -81,6 +81,12 @@ class Data(object):
         self.raw_data = self.raw_data.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
 
         # [sfan] Use scale or not?
+        if self.leverage:
+            max_value = self.df.max().max()
+            min_value = self.df.min().min()
+            self.df = (self.df - min_value) / (max_value - min_value)
+            print("=============== Data Info ================")
+            print("Max value: {}; Min value: {}".format(max_value, min_value))
         """
         df = pd.DataFrame(
             robust_scale(df.values, quantile_range=(.1, 100-.1)),
@@ -132,10 +138,13 @@ class Data(object):
             X = self.df.iloc[offset:offset+self.window]
             y = self.df.iloc[offset+self.window]
             raw = self.raw_data[offset:offset+self.window]
-            # [sfan] normalized by close price of the last timestep in the window
             base = X.iloc[-1]['close']
-            X = X / base
-            y = y / base
+            # [sfan] normalized by close price of the last timestep in the window
+            if not self.leverage:
+                X = X / base
+                y = y / base
+            else:
+                y -= base
         except IndexError:
             X = None
             y = None
