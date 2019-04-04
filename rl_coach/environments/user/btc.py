@@ -39,6 +39,7 @@ class BitcoinEnv(gym.Env):
 
         if self.leverage:
             self.start_cash, self.start_value = 0.0, .0  # .4, .4
+            # self.hypers.EPISODE.stop_loss_dots_per_trade: 每次交易时的最大止损点数，如5个点，10个点
             self.stop_loss = (-1) * self.hypers.EPISODE.stop_loss_dots_per_trade
         else:
             # cash/val start @ about $3.5k each. You should increase/decrease depending on how much you'll put into your
