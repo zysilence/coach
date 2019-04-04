@@ -458,7 +458,7 @@ class GraphManager(object):
             # if no steps were made (can happen when no actions are taken while in the TRAIN phase, either in batch RL
             # or in imitation learning), we force end the loop, so that it will not continue forever.
             if (steps_end - steps_begin) == 0:
-                break
+                return True
 
             # [sfan] if env returns no result, the evaluation is terminated
             if result.next_state.get('observation') is None:
