@@ -271,18 +271,15 @@ class BitcoinEnv(gym.Env):
         # If reaching the stop loss level, the episode is terminated.
         if self.hypers.EPISODE.force_stop_loss:
             if self.leverage:
-                if act_pct * pct_change * self.data.max_value < self.stop_loss:
-                    self.terminal = True
-                    self.is_stop_loss = True
-            else:
-                if total_now < self.stop_loss:
-                    """
-                    print("**************************")
-                    print("Profit is {}".format(totals.trade[-1] * 1.0 / self.start_cash - 1))
-                    print("Profit of last time-step is {}".format(totals.trade[-2] * 1.0 / self.start_cash -1))
-                    """
-                    self.terminal = True
-                    self.is_stop_loss = True
+                total_now = total_now * self.data.max_value
+            if total_now < self.stop_loss:
+                """
+                print("**************************")
+                print("Profit is {}".format(totals.trade[-1] * 1.0 / self.start_cash - 1))
+                print("Profit of last time-step is {}".format(totals.trade[-2] * 1.0 / self.start_cash -1))
+                """
+                self.terminal = True
+                self.is_stop_loss = True
 
         # [sfan] Episode terminating condition 3:
         max_episode_len = self.hypers.EPISODE.max_len
@@ -332,7 +329,7 @@ class BitcoinEnv(gym.Env):
 
         if self.hypers.EPISODE.force_stop_loss and self.is_stop_loss:
             if self.leverage:
-                reward = max((totals.trade[-1] - totals.trade[-2]) * self.data.max_value, self.hypers.EPISODE.stop_loss_dots_per_trade * (-1))
+                reward = self.stop_loss - totals.trade[-2] * self.data.max_value
             else:
                 reward = self.hypers.EPISODE.stop_loss_fraction - 1
         else:
@@ -342,7 +339,6 @@ class BitcoinEnv(gym.Env):
 
         if self.hypers.EPISODE.trade_once:
             reward += self.hypers.REWARD.extra_reward
-
 
         # reward -= self.fee
 
