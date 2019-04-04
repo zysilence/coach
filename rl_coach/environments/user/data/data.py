@@ -81,12 +81,13 @@ class Data(object):
         self.raw_data = self.raw_data.replace([np.inf, -np.inf], np.nan).ffill()  # .bfill()?
 
         # [sfan] Use scale or not?
+        self.max_value = self.df.max().max()
+        self.min_value = self.df.min().min()
         if self.leverage:
-            max_value = self.df.max().max()
-            min_value = self.df.min().min()
-            self.df = (self.df - min_value) / (max_value - min_value)
+            # self.df = (self.df - min_value) / (max_value - min_value)
+            self.df = self.df / self.max_value
             print("=============== Data Info ================")
-            print("Max value: {}; Min value: {}".format(max_value, min_value))
+            print("Max value: {}; Min value: {}".format(self.max_value, self.min_value))
         """
         df = pd.DataFrame(
             robust_scale(df.values, quantile_range=(.1, 100-.1)),

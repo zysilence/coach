@@ -33,18 +33,24 @@ class BitcoinEnv(gym.Env):
 
     def __init__(self):
         self.hypers = Box(json.load(open(os.path.dirname(__file__) + '/config/btc.json')))
-
-        # cash/val start @ about $3.5k each. You should increase/decrease depending on how much you'll put into your
-        # exchange accounts to trade with. Presumably the agent will learn to work with what you've got (cash/value
-        # are state inputs); but starting capital does effect the learning process.
-        self.start_cash, self.start_value = 1.0, .0  # .4, .4
-
-        # [sfan] default: 'train'; can be set by 'set_mode' method
-        self.mode = self.hypers.EPISODE.mode
-
         # [sfan] 是否是保证金交易
         # 如果是保证金交易，则state和reward与价格差值有关；反之，与价格的比例有关
         self.leverage = self.hypers.EPISODE.leverage
+
+        if self.leverage:
+            self.start_cash, self.start_value = 0.0, .0  # .4, .4
+            self.stop_loss = (-1) * self.hypers.EPISODE.stop_loss_dots_per_trade
+        else:
+            # cash/val start @ about $3.5k each. You should increase/decrease depending on how much you'll put into your
+            # exchange accounts to trade with. Presumably the agent will learn to work with what you've got (cash/value
+            # are state inputs); but starting capital does effect the learning process.
+            self.start_cash, self.start_value = 1.0, .0  # .4, .4
+            # [sfan] stop loss value: minimal cash remained
+            self.stop_loss = self.start_cash * self.hypers.EPISODE.stop_loss_fraction
+
+
+        # [sfan] default: 'train'; can be set by 'set_mode' method
+        self.mode = self.hypers.EPISODE.mode
 
         # We have these "accumulator" objects, which collect values over steps, over episodes, etc. Easier to keep
         # same-named variables separate this way.
@@ -64,9 +70,6 @@ class BitcoinEnv(gym.Env):
         # gdax min order size = .01btc; kraken = .002btc
         self.min_trade = {Exchange.GDAX: .01, Exchange.KRAKEN: .002}[EXCHANGE]
         # self.update_btc_price()
-
-        # [sfan] stop loss value: minimal cash remained
-        self.stop_loss = self.start_cash * self.hypers.EPISODE.stop_loss_fraction
 
         # Action space
         # see {last_good_commit_ for action_types other than 'single_discrete'
@@ -171,55 +174,56 @@ class BitcoinEnv(gym.Env):
         }[EXCHANGE]
         """
 
-        # Perform the trade.
-        # "act_pct == 0": take a short position(空仓)
-        # "act_pct > 0": buying lone(做多，若已经做多了则持仓)
-        # "act_pct < 0": selling short(做空，若已经做空了则持仓)
-        # "acc.step.value < 0": means you have already sold short(已经做空)
-        # "acc.step.value = 0": means you have taken a short position(空仓)
-        # "acc.step.value > 0": means you have already bought long(已经做多)
-        if act_pct > 0:
-            if acc.step.value == 0 and acc.step.cash >= self.stop_loss:
-                # 直接买入多单
-                act_value = act_pct * acc.step.cash
-                self.fee = abs(act_value) * fee_rate
-                acc.step.value += act_value - self.fee
-                acc.step.cash -= act_value
-            elif acc.step.value < 0:
-                # 第一步：平掉空单
-                fee = abs(acc.step.value) * fee_rate
-                acc.step.cash += acc.step.value - fee
-                acc.step.value = 0
-                # 第二步：买入多单
-                if acc.step.cash >= self.stop_loss:
+        if not self.leverage:
+            # Perform the trade.
+            # "act_pct == 0": take a short position(空仓)
+            # "act_pct > 0": buying lone(做多，若已经做多了则持仓)
+            # "act_pct < 0": selling short(做空，若已经做空了则持仓)
+            # "acc.step.value < 0": means you have already sold short(已经做空)
+            # "acc.step.value = 0": means you have taken a short position(空仓)
+            # "acc.step.value > 0": means you have already bought long(已经做多)
+            if act_pct > 0:
+                if acc.step.value == 0 and acc.step.cash >= self.stop_loss:
+                    # 直接买入多单
                     act_value = act_pct * acc.step.cash
-                    fee = abs(act_value) * fee_rate
-                    acc.step.value += act_value - fee
+                    self.fee = abs(act_value) * fee_rate
+                    acc.step.value += act_value - self.fee
                     acc.step.cash -= act_value
-        elif act_pct == 0:
-            # self.fee = acc.step.value * fee_rate
-            # acc.step.cash += acc.step.value - self.fee
-            acc.step.cash += acc.step.value
-            acc.step.value = 0
-            # [sfan] Episode terminating condition 1:
-            #   Trade once per episode. When shorting the trade, the episode is terminated.
-            if self.hypers.EPISODE.trade_once:
-                self.terminal = True
-        else:
-            if acc.step.value == 0:
-                # 直接空单
-                # 注意：act_value小于0
-                act_value = act_pct * acc.step.cash
-                acc.step.value += act_value
-                acc.step.cash -= act_value
-            elif acc.step.value > 0:
-                # 第一步：平掉多单
+                elif acc.step.value < 0:
+                    # 第一步：平掉空单
+                    fee = abs(acc.step.value) * fee_rate
+                    acc.step.cash += acc.step.value - fee
+                    acc.step.value = 0
+                    # 第二步：买入多单
+                    if acc.step.cash >= self.stop_loss:
+                        act_value = act_pct * acc.step.cash
+                        fee = abs(act_value) * fee_rate
+                        acc.step.value += act_value - fee
+                        acc.step.cash -= act_value
+            elif act_pct == 0:
+                # self.fee = acc.step.value * fee_rate
+                # acc.step.cash += acc.step.value - self.fee
                 acc.step.cash += acc.step.value
                 acc.step.value = 0
-                # 第二步：空单
-                act_value = act_pct * acc.step.cash
-                acc.step.value += act_value
-                acc.step.cash -= act_value
+                # [sfan] Episode terminating condition 1:
+                #   Trade once per episode. When shorting the trade, the episode is terminated.
+                if self.hypers.EPISODE.trade_once:
+                    self.terminal = True
+            else:
+                if acc.step.value == 0:
+                    # 直接空单
+                    # 注意：act_value小于0
+                    act_value = act_pct * acc.step.cash
+                    acc.step.value += act_value
+                    acc.step.cash -= act_value
+                elif acc.step.value > 0:
+                    # 第一步：平掉多单
+                    acc.step.cash += acc.step.value
+                    acc.step.value = 0
+                    # 第二步：空单
+                    act_value = act_pct * acc.step.cash
+                    acc.step.value += act_value
+                    acc.step.cash -= act_value
 
         # next delta. [1,2,2].pct_change() == [NaN, 1, 0]
         # pct_change = self.prices_diff[acc.step.i + 1]
@@ -230,7 +234,7 @@ class BitcoinEnv(gym.Env):
         hold_before = totals.trade[-1]
         if self.leverage:
             acc.step.hold_value = pct_change + hold_before
-            acc.step.value += pct_change
+            acc.step.value += act_pct * pct_change
         else:
             acc.step.hold_value = pct_change * hold_before
             acc.step.value = pct_change * acc.step.value
@@ -264,14 +268,20 @@ class BitcoinEnv(gym.Env):
 
         # [sfan] Episode terminating condition 2:
         # If reaching the stop loss level, the episode is terminated.
-        if total_now < self.stop_loss:
-            """
-            print("**************************")
-            print("Profit is {}".format(totals.trade[-1] * 1.0 / self.start_cash - 1))
-            print("Profit of last time-step is {}".format(totals.trade[-2] * 1.0 / self.start_cash -1))
-            """
-            self.terminal = True
-            self.is_stop_loss = True
+        if self.hypers.EPISODE.force_stop_loss:
+            if self.leverage:
+                if pct_change * self.data.max_value < self.stop_loss:
+                    self.terminal = True
+                    self.is_stop_loss = True
+            else:
+                if total_now < self.stop_loss:
+                    """
+                    print("**************************")
+                    print("Profit is {}".format(totals.trade[-1] * 1.0 / self.start_cash - 1))
+                    print("Profit of last time-step is {}".format(totals.trade[-2] * 1.0 / self.start_cash -1))
+                    """
+                    self.terminal = True
+                    self.is_stop_loss = True
 
         # [sfan] Episode terminating condition 3:
         max_episode_len = self.hypers.EPISODE.max_len
@@ -329,6 +339,9 @@ class BitcoinEnv(gym.Env):
 
         if self.hypers.EPISODE.trade_once:
             reward += self.hypers.REWARD.extra_reward
+
+        if self.leverage:
+            reward *= self.data.max_value
 
         # reward -= self.fee
 
