@@ -228,17 +228,32 @@ class BitcoinEnv(gym.Env):
 
         # next delta. [1,2,2].pct_change() == [NaN, 1, 0]
         # pct_change = self.prices_diff[acc.step.i + 1]
-        _, y, _ = self.data.get_data(acc.ep.i, acc.step.i)  # TODO verify
+        _, y, raw = self.data.get_data(acc.ep.i, acc.step.i)  # TODO verify
         pct_change = y[self.data.target]
 
         # [sfan]
+        info = dict()
         hold_before = totals.trade[-1]
         if self.leverage:
             acc.step.hold_value = pct_change + hold_before
             acc.step.value += act_pct * pct_change
         else:
+            info['raw_reward'] = 0
             acc.step.hold_value = pct_change * hold_before
             acc.step.value = pct_change * acc.step.value
+            if acc.step.value > 0:
+                info['raw_reward'] = raw[self.data.target][-1] - raw[self.data.target][-2]
+            elif acc.step.value < 0:
+                info['raw_reward'] = raw[self.data.target][-2] - raw[self.data.target][-1]
+
+            # 减去点差
+            if len(acc.step.signals) == 1:
+                if acc.step.signals[-1] > 0:
+                    info['raw_reward'] -= act_pct * 0.5
+            elif acc.step.signals[-1] > 0 and acc.step.signals[-2] == 0:
+                info['raw_reward'] -= act_pct * 0.5
+            elif acc.step.signals[-1] > 0 and acc.step.signals[-2] < 0:
+                info['raw_reward'] -= act_pct * 1
 
         totals.hold.append(acc.step.hold_value)
         total_now = acc.step.value + acc.step.cash
@@ -298,7 +313,7 @@ class BitcoinEnv(gym.Env):
         reward = self.get_return()
 
         # if acc.step.value <= 0 or acc.step.cash <= 0: terminal = 1
-        return next_state, reward, self.terminal, {}
+        return next_state, reward, self.terminal, info
 
     def close(self):
         pass

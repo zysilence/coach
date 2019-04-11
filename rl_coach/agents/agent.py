@@ -154,9 +154,12 @@ class Agent(AgentInterface):
         # initialize all internal variables
         self._phase = RunPhase.HEATUP
         self.total_shaped_reward_in_current_episode = 0
+        # [sfan] add more info to print
         self.max_drawdown = 0
         self.max_drawdown_per_step = 0
         self.max_profit = 0
+        self.total_raw_reward = 0
+
         self.total_reward_in_current_episode = 0
         self.total_steps_counter = 0
         self.running_reward = None
@@ -464,9 +467,12 @@ class Agent(AgentInterface):
             log["Worker"] = self.task_id
         log["Episode"] = self.current_episode
         log["Total_R"] = np.round(self.total_reward_in_current_episode, 3)
+        # [sfan]
+        log["Total_Raw_R"] = np.round(self.total_raw_reward, 3)
         log["Max_draw"] = np.round(self.max_drawdown, 3)
         log["Max_draw_step"] = np.round(self.max_drawdown_per_step, 3)
         log["Max_profit"] = np.round(self.max_profit, 3)
+
         log["Exploration"] = np.round(self.exploration_policy.get_control_param(), 2)
         log["Steps"] = self.total_steps_counter
         log["Iter"] = self.training_iteration
@@ -489,9 +495,12 @@ class Agent(AgentInterface):
         self.agent_episode_logger.create_signal_value('Total steps', self.total_steps_counter)
         self.agent_episode_logger.create_signal_value("Epsilon", self.exploration_policy.get_control_param())
         self.agent_episode_logger.create_signal_value("Shaped Accumulated Reward", self.total_shaped_reward_in_current_episode)
+        # [sfan]
         self.agent_episode_logger.create_signal_value("Max_drawdown", self.max_drawdown)
         self.agent_episode_logger.create_signal_value("Max_drawdown_step", self.max_drawdown_per_step)
-        self.agent_episode_logger.create_signal_value("Maximum profit", self.max_profit)
+        self.agent_episode_logger.create_signal_value("Max_profit", self.max_profit)
+        self.agent_episode_logger.create_signal_value("Total_raw_reward", self.total_raw_reward)
+
         self.agent_episode_logger.create_signal_value('Update Target Network', 0, overwrite=False)
         self.agent_episode_logger.update_wall_clock_time(self.current_episode_steps_counter)
 
@@ -521,9 +530,12 @@ class Agent(AgentInterface):
         self.agent_logger.create_signal_value('Episode Length', self.current_episode_steps_counter)
         self.agent_logger.create_signal_value('Total steps', self.total_steps_counter)
         self.agent_logger.create_signal_value("Epsilon", np.mean(self.exploration_policy.get_control_param()))
+        # [sfan]
         self.agent_logger.create_signal_value("Max_drawdown", self.max_drawdown)
         self.agent_logger.create_signal_value("Max_drawdown_step", self.max_drawdown_per_step)
-        self.agent_logger.create_signal_value("Maximum profit", self.max_profit)
+        self.agent_logger.create_signal_value("Max_profit", self.max_profit)
+        self.agent_logger.create_signal_value("Total_raw_reward", self.total_raw_reward)
+
         self.agent_logger.create_signal_value("Shaped Training Reward", self.total_shaped_reward_in_current_episode
                                    if self._phase == RunPhase.TRAIN else np.nan)
         self.agent_logger.create_signal_value("Training Reward", self.total_reward_in_current_episode
@@ -606,9 +618,12 @@ class Agent(AgentInterface):
             signal.reset()
         self.agent_episode_logger.set_episode_idx(self.current_episode)
         self.total_shaped_reward_in_current_episode = 0
+        # [sfan]
         self.max_drawdown = 0
         self.max_drawdown_per_step = 0
         self.max_profit = 0
+        self.total_raw_reward = 0
+
         self.total_reward_in_current_episode = 0
         self.curr_state = {}
         self.current_episode_steps_counter = 0
@@ -928,9 +943,18 @@ class Agent(AgentInterface):
             # sum up the total shaped reward
             self.total_shaped_reward_in_current_episode += transition.reward
             self.total_reward_in_current_episode += env_response.reward
-            self.max_drawdown = min(self.max_drawdown, self.total_reward_in_current_episode)
-            self.max_drawdown_per_step = min(self.max_drawdown_per_step, env_response.reward)
-            self.max_profit = max(self.max_profit, self.total_reward_in_current_episode)
+            # [sfan]
+            if env_response.info.get('raw_reward'):
+                self.total_raw_reward += env_response.info['raw_reward']
+                self.max_drawdown = min(self.max_drawdown, self.total_raw_reward)
+                self.max_drawdown_per_step = min(self.max_drawdown_per_step, env_response.info['raw_reward'])
+                self.max_profit = max(self.max_profit, self.total_raw_reward)
+            else:
+                self.total_raw_reward += 0
+                self.max_drawdown = min(self.max_drawdown, self.total_reward_in_current_episode)
+                self.max_drawdown_per_step = min(self.max_drawdown_per_step, env_response.reward)
+                self.max_profit = max(self.max_profit, self.total_reward_in_current_episode)
+
             self.shaped_reward.add_sample(transition.reward)
             self.reward.add_sample(env_response.reward)
 
@@ -1052,9 +1076,18 @@ class Agent(AgentInterface):
         # sum up the total shaped reward
         self.total_shaped_reward_in_current_episode += transition.reward
         self.total_reward_in_current_episode += transition.reward
-        self.max_drawdown = min(self.max_drawdown, self.total_reward_in_current_episode)
-        self.max_drawdown_per_step = min(self.max_drawdown_per_step, transition.reward)
-        self.max_profit = max(self.max_profit, self.total_reward_in_current_episode)
+        # [sfan]
+        if transition.info.get('raw_reward'):
+            self.total_raw_reward += transition.info['raw_reward']
+            self.max_drawdown = min(self.max_drawdown, self.total_raw_reward)
+            self.max_drawdown_per_step = min(self.max_drawdown_per_step, transition.info['raw_reward'])
+            self.max_profit = max(self.max_profit, self.total_raw_reward)
+        else:
+            self.total_raw_reward += transition.info['raw_reward']
+            self.max_drawdown = min(self.max_drawdown, self.total_reward_in_current_episode)
+            self.max_drawdown_per_step = min(self.max_drawdown_per_step, transition.reward)
+            self.max_profit = max(self.max_profit, self.total_reward_in_current_episode)
+
         self.shaped_reward.add_sample(transition.reward)
         self.reward.add_sample(transition.reward)
         

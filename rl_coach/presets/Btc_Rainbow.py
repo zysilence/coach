@@ -31,7 +31,7 @@ agent_params.memory.max_size = (MemoryGranularity.Transitions, 100000)  # defaul
 agent_params.memory.beta = LinearSchedule(0.4, 1, 12500000)  # 12.5M training iterations = 50M steps = 200M frames
 agent_params.memory.alpha = 0.5
 agent_params.exploration = EGreedyParameters()
-agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 10000000)  # decault value: 1000000
+agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 2000000)  # decault value: 1000000
 agent_params.exploration.evaluation_epsilon = 0
 agent_params.network_wrappers['main'].input_embedders_parameters['observation'].scheme = \
     [

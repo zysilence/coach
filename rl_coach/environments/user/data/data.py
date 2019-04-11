@@ -136,9 +136,9 @@ class Data(object):
     def get_data(self, ep_start, step):
         offset = self.offset(ep_start, step)
         try:
-            X = self.df.iloc[offset:offset+self.window]
-            y = self.df.iloc[offset+self.window]
-            raw = self.raw_data[offset:offset+self.window]
+            X = self.df.iloc[offset:offset + self.window]
+            y = self.df.iloc[offset + self.window]
+            raw = self.raw_data[offset:offset + self.window + 1]
             base = X.iloc[-1]['close']
             # [sfan] normalized by close price of the last timestep in the window
             if not self.leverage:
