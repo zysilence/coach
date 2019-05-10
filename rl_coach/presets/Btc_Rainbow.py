@@ -15,7 +15,7 @@ from rl_coach.schedules import LinearSchedule
 # Graph Scheduling #
 ####################
 schedule_params = ScheduleParameters()
-schedule_params.improve_steps = EnvironmentSteps(6000000)
+schedule_params.improve_steps = EnvironmentSteps(20000000)
 schedule_params.steps_between_evaluation_periods = EnvironmentEpisodes(10)
 schedule_params.evaluation_steps = EnvironmentSteps(1)
 schedule_params.heatup_steps = EnvironmentSteps(1000)
