@@ -56,7 +56,7 @@ agent_params.network_wrappers['main'].input_embedders_parameters['observation'].
     BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
     Conv2d(128, [3, 1], 1),
     BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
-    Conv2d(256, [3, 1], 1)
+    Conv2d(256, [3, 1], 1),
     BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
     Dense(512),
     BatchnormActivationDropout(activation_function='tanh', dropout_rate=0.5),
