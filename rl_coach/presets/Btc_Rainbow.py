@@ -1,5 +1,5 @@
 from rl_coach.agents.rainbow_dqn_agent import RainbowDQNAgentParameters
-from rl_coach.architectures.tensorflow_components.layers import Conv2d, Dense
+from rl_coach.architectures.tensorflow_components.layers import Conv2d, Dense, BatchnormActivationDropout
 from rl_coach.base_parameters import VisualizationParameters, PresetValidationParameters, EmbedderScheme
 from rl_coach.core_types import EnvironmentEpisodes, EnvironmentSteps
 from rl_coach.environments.gym_environment import GymEnvironmentParameters, ObservationSpaceType
@@ -26,27 +26,42 @@ schedule_params.heatup_steps = EnvironmentSteps(1000)
 agent_params = RainbowDQNAgentParameters()
 agent_params.network_wrappers['main'].learning_rate = 0.0000625
 agent_params.network_wrappers['main'].optimizer_epsilon = 1.5e-4
+agent_params.network_wrappers['main'].l2_regularization = 1.0e-4
 agent_params.algorithm.num_steps_between_copying_online_weights_to_target = EnvironmentSteps(1000)  # 32k frames
 agent_params.memory.max_size = (MemoryGranularity.Transitions, 100000)  # default: 1000000
 agent_params.memory.beta = LinearSchedule(0.4, 1, 12500000)  # 12.5M training iterations = 50M steps = 200M frames
 agent_params.memory.alpha = 0.5
 agent_params.exploration = EGreedyParameters()
-agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 2000000)  # decault value: 1000000
+agent_params.exploration.epsilon_schedule = LinearSchedule(1, 0.1, 10000000)  # decault value: 1000000
 agent_params.exploration.evaluation_epsilon = 0
 agent_params.network_wrappers['main'].input_embedders_parameters['observation'].scheme = \
     [
         Conv2d(32, [5, 1], [2, 1]),
+        BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
         Conv2d(64, [3, 1], 1),
-        Conv2d(64, [3, 1], 1)
+        BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
+        Conv2d(64, [3, 1], 1),
+        BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
+        Dense(512),
+        BatchnormActivationDropout(activation_function='tanh', dropout_rate=0.5)
     ]
 """
 agent_params.network_wrappers['main'].input_embedders_parameters['observation'].scheme = \
     [
     Conv2d(32, [5, 1], [2, 1]),
+    BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
     Conv2d(64, [3, 1], 1),
+    BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
     Conv2d(64, [3, 1], 1),
+    BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
     Conv2d(128, [3, 1], 1),
+    BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
     Conv2d(256, [3, 1], 1)
+    BatchnormActivationDropout(batchnorm=True, activation_function='tanh'),
+    Dense(512),
+    BatchnormActivationDropout(activation_function='tanh', dropout_rate=0.5),
+    Dense(512),
+    BatchnormActivationDropout(activation_function='tanh', dropout_rate=0.5)
     ]
 """
 
